@@ -32,7 +32,7 @@ useEffect(() => {
     const { _id, tipo } = ticketSeleccionado;
     const endpoint = tipo === 'toner' ? 'toners' : 'tickets';
 
-    fetch(`http://copias-backend-production.up.railway.app/${endpoint}/${_id}`)
+    fetch(`https://copias-backend-production.up.railway.app/${endpoint}/${_id}`)
       .then((response) => response.json())
       .then((data) => setTicketDetalle(data))
       .catch((error) => console.error('Error al obtener detalle:', error));

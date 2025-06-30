@@ -362,7 +362,7 @@ const getCardColor = (tipo, estado) => {
         </IconButton>
       </Tooltip>
           <Tooltip title="Ver Detalle ⚡️">
-      <IconButton onClick={(e) => { e.stopPropagation(); setTicketSeleccionado({ticket }); }}>
+      <IconButton onClick={(e) => { e.stopPropagation(); setTicketSeleccionado({ _id: ticket._id, tipo: ticket.tipo }); }}>
         <span style={{ fontSize: '20px' }}>⚡️</span>
       </IconButton>
     </Tooltip>
@@ -377,7 +377,7 @@ const getCardColor = (tipo, estado) => {
       </IconButton>
     </Tooltip>
     <Tooltip title="Ver Detalle ⚡️">
-      <IconButton onClick={(e) => { e.stopPropagation();setTicketSeleccionado({ticket}); }}>
+      <IconButton onClick={(e) => { e.stopPropagation();setTicketSeleccionado({ _id: ticket._id, tipo: ticket.tipo }); }}>
         <span style={{ fontSize: '20px' }}>⚡️</span>
       </IconButton>
     </Tooltip>
@@ -392,7 +392,7 @@ const getCardColor = (tipo, estado) => {
       </Tooltip>
 
       <Tooltip title="Ver Detalle ⚡️">
-        <IconButton onClick={(e) => { e.stopPropagation(); setTicketSeleccionado({ticket}); }}>
+        <IconButton onClick={(e) => { e.stopPropagation(); setTicketSeleccionado({ _id: ticket._id, tipo: ticket.tipo }); }}>
           <span style={{ fontSize: '20px' }}>⚡️</span>
         </IconButton>
       </Tooltip>
@@ -543,7 +543,7 @@ const getCardColor = (tipo, estado) => {
   )}
 
   <Tooltip title="Ver Detalle ⚡️">
-    <IconButton onClick={(e) => { e.stopPropagation(); setTicketSeleccionado({ticket}); }}>
+    <IconButton onClick={(e) => { e.stopPropagation(); setTicketSeleccionado({ _id: ticket._id, tipo: ticket.tipo }); }}>
       <span style={{ fontSize: '20px' }}>⚡️</span>
     </IconButton>
   </Tooltip>
