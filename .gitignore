@@ -11,3 +11,6 @@ build/
 # Otros
 .DS_Store
 .vscode
+
+git add src --force
+
