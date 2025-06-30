@@ -10,7 +10,7 @@ function EliminarTecnico() {
   const [tecnicos, setTecnicos] = useState([]);
 
   const cargarTecnicos = () => {
-    fetch('http://localhost:3000/tecnicos')
+    fetch('https://copias-backend-production.up.railway.app/tecnicos')
       .then(response => response.json())
       .then(data => setTecnicos(data))
       .catch(error => console.error('Error al obtener técnicos:', error));
@@ -24,7 +24,7 @@ function EliminarTecnico() {
     const confirmado = window.confirm('¿Estás seguro de ELIMINAR este técnico? Esta acción NO se puede deshacer.');
     if (!confirmado) return;
 
-    fetch(`http://localhost:3000/tecnicos/${tecnicoId}`, {
+    fetch(`https://copias-backend-production.up.railway.app/tecnicos/${tecnicoId}`, {
       method: 'DELETE',
     })
       .then(() => cargarTecnicos())

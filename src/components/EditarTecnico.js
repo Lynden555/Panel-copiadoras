@@ -24,7 +24,7 @@ function EditarTecnico() {
   const [fotoPreview, setFotoPreview] = useState('');
 
   useEffect(() => {
-    fetch('http://localhost:3000/tecnicos')
+    fetch('https://copias-backend-production.up.railway.app/tecnicos')
       .then(response => response.json())
       .then(data => setTecnicos(data))
       .catch(error => console.error('Error al obtener técnicos:', error));
@@ -71,7 +71,7 @@ function EditarTecnico() {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/tecnicos/${tecnicoSeleccionado}`, {
+      const response = await fetch(`https://copias-backend-production.up.railway.app/tecnicos/${tecnicoSeleccionado}`, {
         method: 'PATCH',
         body: formData,
       });

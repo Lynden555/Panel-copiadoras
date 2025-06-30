@@ -30,9 +30,9 @@ const [tecnicos, setTecnicos] = useState([]);
 
 const cargarDatos = () => {
   Promise.all([
-    fetch('http://localhost:3000/tickets').then(res => res.json()),
-    fetch('http://localhost:3000/toners').then(res => res.json()),
-    fetch('http://localhost:3000/tecnicos').then(res => res.json())
+    fetch('https://copias-backend-production.up.railway.app/tickets').then(res => res.json()),
+    fetch('https://copias-backend-production.up.railway.apptoners').then(res => res.json()),
+    fetch('https://copias-backend-production.up.railway.app/tecnicos').then(res => res.json())
   ])
     .then(([ticketsData, tonersData, tecnicosData]) => {
       const ticketsOrdenados = ticketsData.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
@@ -76,7 +76,7 @@ useEffect(() => {
 const handleCancelar = (ticketId, tipo) => {
   const confirmado = window.confirm('¿Estás seguro de CANCELAR este elemento?');
   if (!confirmado) return;
-  fetch(`http://localhost:3000/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
+  fetch(`https://copias-backend-production.up.railway.app/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ estado: 'Cancelado', tecnicoAsignado: null }),
@@ -87,7 +87,7 @@ const handleCancelar = (ticketId, tipo) => {
 const handleTerminar = (ticketId, tipo) => {
   const confirmado = window.confirm('¿Estás seguro de marcar este elemento como TERMINADO?');
   if (!confirmado) return;
-  fetch(`http://localhost:3000/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
+  fetch(`https://copias-backend-production.up.railway.app/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ estado: 'Terminado' }),
@@ -98,7 +98,7 @@ const handleTerminar = (ticketId, tipo) => {
 const handleRevertir = (ticketId, tipo) => {
   const confirmado = window.confirm('¿Estás seguro de REVERTIR este elemento a Pendiente?');
   if (!confirmado) return;
-  fetch(`http://localhost:3000/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
+  fetch(`https://copias-backend-production.up.railway.app/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ estado: 'Pendiente', tecnicoAsignado: null }),
@@ -109,7 +109,7 @@ const handleRevertir = (ticketId, tipo) => {
  const handleEliminarDefinitivo = (ticketId, tipo) => {
   const confirmado = window.confirm('¿Estás seguro de ELIMINAR DEFINITIVAMENTE este elemento?');
   if (!confirmado) return;
-  fetch(`http://localhost:3000/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
+  fetch(`https://copias-backend-production.up.railway.app/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
     method: 'DELETE',
   }).then(() => cargarDatos())
     .catch(error => console.error('Error al eliminar elemento:', error));
@@ -135,7 +135,7 @@ const onDragEnd = (result) => {
   setBloquearRefresco(true);
 
   // Ahora guardar en backend
-  fetch(`http://localhost:3000/${endpoint}/${draggableId}`, {
+  fetch(`https://copias-backend-production.up.railway.app/${endpoint}/${draggableId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ estado: nuevoEstado, tecnicoAsignado: nuevoTecnico }),

@@ -4,7 +4,7 @@ function TecnicosList({ onAsignarTecnico, ticketSeleccionado }) {
   const [tecnicos, setTecnicos] = useState([]);
 
   useEffect(() => {
-    fetch('http://localhost:3000/tecnicos')
+    fetch('https://copias-backend-production.up.railway.app/tecnicos')
       .then(response => response.json())
       .then(data => setTecnicos(data))
       .catch(error => console.error('Error al obtener técnicos:', error));
@@ -16,7 +16,7 @@ function TecnicosList({ onAsignarTecnico, ticketSeleccionado }) {
       return;
     }
 
-    fetch(`http://localhost:3000/tickets/${ticketSeleccionado}`, {
+    fetch(`https://copias-backend-production.up.railway.app/tickets/${ticketSeleccionado}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

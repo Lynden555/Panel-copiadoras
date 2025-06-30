@@ -19,7 +19,7 @@ function AgregarTecnico() {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    fetch('http://localhost:3000/tecnicos', {
+    fetch('https://copias-backend-production.up.railway.app/tecnicos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre, fotoUrl: fotoBase64 }),
