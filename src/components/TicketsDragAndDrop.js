@@ -31,7 +31,7 @@ const [tecnicos, setTecnicos] = useState([]);
 const cargarDatos = () => {
   Promise.all([
     fetch('https://copias-backend-production.up.railway.app/tickets').then(res => res.json()),
-    fetch('https://copias-backend-production.up.railway.apptoners').then(res => res.json()),
+    fetch('https://copias-backend-production.up.railway.app/toners').then(res => res.json()),
     fetch('https://copias-backend-production.up.railway.app/tecnicos').then(res => res.json())
   ])
     .then(([ticketsData, tonersData, tecnicosData]) => {
