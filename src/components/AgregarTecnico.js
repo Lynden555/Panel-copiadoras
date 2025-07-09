@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 function AgregarTecnico() {
   const [nombre, setNombre] = useState('');
+  const [pin, setPin] = useState('');
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoBase64, setFotoBase64] = useState('');
 
@@ -16,18 +17,24 @@ function AgregarTecnico() {
     reader.readAsDataURL(file);
   };
 
+  const handlePinChange = (e) => {
+    const value = e.target.value.replace(/\D/g, ''); // solo dígitos
+    if (value.length <= 4) setPin(value);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     fetch('https://copias-backend-production.up.railway.app/tecnicos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, fotoUrl: fotoBase64 }),
+      body: JSON.stringify({ nombre, tecnicoId: pin, fotoUrl: fotoBase64 }),
     })
       .then((response) => response.json())
       .then((data) => {
         alert('Técnico agregado correctamente');
         setNombre('');
+        setPin('');
         setFotoFile(null);
         setFotoBase64('');
       })
@@ -54,6 +61,17 @@ function AgregarTecnico() {
             style={{ width: '100%', padding: '8px', fontSize: '16px' }}
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
+            required
+          />
+        </div>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>PIN (4 dígitos):</label>
+          <input
+            type="text"
+            value={pin}
+            onChange={handlePinChange}
+            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
+            placeholder="Ej: 1234"
             required
           />
         </div>
