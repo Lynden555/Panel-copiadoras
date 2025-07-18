@@ -64,6 +64,20 @@ function TicketDetalle({ ticket }) {
 <p><strong>Estado:</strong> {ticket.estado}</p>
 <p><strong>Técnico asignado:</strong> {ticket.tecnicoAsignado || 'Ninguno'}</p>
 
+{ticket.latitud && ticket.longitud && (
+  <p>
+    <strong>Ubicación:</strong>{' '}
+    <a
+      href={`https://www.google.com/maps?q=${ticket.latitud},${ticket.longitud}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: '#007bff', textDecoration: 'underline' }}
+    >
+      Ver en Google Maps
+    </a>
+  </p>
+)}
+
 {ticket.fotos?.length > 0 && (
   <div style={{ marginTop: '10px' }}>
     <p><strong>Fotos adjuntas:</strong></p>
