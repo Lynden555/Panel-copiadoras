@@ -1,12 +1,36 @@
 import React, { useState } from 'react';
+import { useEffect } from 'react';
+
+
 
 function TicketDetalle({ ticket }) {
   const [imagenSeleccionada, setImagenSeleccionada] = useState(null);
   const [indiceImagen, setIndiceImagen] = useState(0);
+  const [tecnicoCercano, setTecnicoCercano] = useState(null);
 
 
 
   if (!ticket) return null;
+
+  useEffect(() => {
+  const obtenerTecnicoCercano = async () => {
+    if (!ticket.latitud || !ticket.longitud) return;
+
+    try {
+      const respuesta = await fetch(
+        `https://copias-backend-production.up.railway.app/tecnico-cercano/${ticket.latitud}/${ticket.longitud}?distancia=20`
+      );
+      if (respuesta.ok) {
+        const data = await respuesta.json();
+        setTecnicoCercano(data);
+      }
+    } catch (error) {
+      console.error('Error al obtener técnico cercano:', error);
+    }
+  };
+
+  obtenerTecnicoCercano();
+}, [ticket.latitud, ticket.longitud]);
 
   if (ticket.tipo === 'toner') {
   //ticket.descripcionFalla = `Solicitud de tóner para ${ticket.impresora || 'impresora desconocida'}`;
@@ -62,7 +86,57 @@ function TicketDetalle({ ticket }) {
 )}
 
 <p><strong>Estado:</strong> {ticket.estado}</p>
-<p><strong>Técnico asignado:</strong> {ticket.tecnicoAsignado || 'Ninguno'}</p>
+{!ticket.tecnicoAsignado && tecnicoCercano && (
+  <button
+    onClick={async () => {
+      try {
+        const respuesta = await fetch(`https://copias-backend-production.up.railway.app/asignar-tecnico/${ticket._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tecnicoId: tecnicoCercano.tecnicoId })
+        });
+
+        if (respuesta.ok) {
+          alert('✅ Técnico asignado correctamente');
+          window.location.reload(); // 🔄 Recarga para mostrar el cambio
+        } else {
+          alert('❌ No se pudo asignar el técnico');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('⚠️ Error al asignar técnico');
+      }
+    }}
+    style={{
+      backgroundColor: '#28a745',
+      color: 'white',
+      border: 'none',
+      padding: '10px 20px',
+      fontSize: '14px',
+      fontWeight: 'bold',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      marginBottom: '15px',
+      boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+      transition: 'background 0.3s',
+    }}
+    onMouseOver={e => e.target.style.backgroundColor = '#218838'}
+    onMouseOut={e => e.target.style.backgroundColor = '#28a745'}
+  >
+    📍 Asignar técnico más cercano
+  </button>
+)}
+<p>
+  <strong>Técnico asignado:</strong>{' '}
+  {ticket.tecnicoAsignado || (tecnicoCercano ? (
+    <>
+      <span style={{ color: '#28a745' }}>{tecnicoCercano.nombre}</span>{' '}
+      <span style={{ fontSize: '12px', color: '#777' }}>
+        ({tecnicoCercano.distancia.toFixed(1)} km)
+      </span>
+    </>
+  ) : 'Ninguno')}
+</p>
 
 {ticket.latitud && ticket.longitud && (
   <p>
