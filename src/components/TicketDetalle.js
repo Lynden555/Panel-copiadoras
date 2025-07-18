@@ -10,8 +10,6 @@ function TicketDetalle({ ticket }) {
 
 
 
-  if (!ticket) return null;
-
   useEffect(() => {
   const obtenerTecnicoCercano = async () => {
     if (!ticket.latitud || !ticket.longitud) return;
@@ -31,6 +29,8 @@ function TicketDetalle({ ticket }) {
 
   obtenerTecnicoCercano();
 }, [ticket.latitud, ticket.longitud]);
+
+  if (!ticket) return null;
 
   if (ticket.tipo === 'toner') {
   //ticket.descripcionFalla = `Solicitud de tóner para ${ticket.impresora || 'impresora desconocida'}`;
