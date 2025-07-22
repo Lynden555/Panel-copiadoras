@@ -98,7 +98,7 @@ function TicketDetalle({ ticket }) {
           onClick={async () => {
             try {
               const respuesta = await fetch(`https://copias-backend-production.up.railway.app/asignar-tecnico/${ticket._id}`, {
-                method: 'PUT',
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tecnicoId: tecnicoCercano.tecnicoId })
               });
