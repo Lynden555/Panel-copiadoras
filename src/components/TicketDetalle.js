@@ -5,9 +5,10 @@ function TicketDetalle({ ticket }) {
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [tecnicoCercano, setTecnicoCercano] = useState(null);
 
-  useEffect(() => {
-    const obtenerTecnicoCercano = async () => {
-      if (!ticket.latitud || !ticket.longitud) return;
+useEffect(() => {
+  const obtenerTecnicoCercano = async () => {
+    if (ticket.tipo === 'toner') return; // 🔒 no buscar técnico para pedidos de tóner
+    if (!ticket.latitud || !ticket.longitud) return;
 
       try {
         const respuesta = await fetch(
