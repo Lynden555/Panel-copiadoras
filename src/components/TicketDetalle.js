@@ -76,23 +76,25 @@ useEffect(() => {
 
       <p><strong>Estado:</strong> {ticket.estado}</p>
 
-      <p>
-        <strong>
-          {ticket.tecnicoAsignado ? 'Técnico asignado:' : 'Técnico más cercano:'}
-        </strong>{' '}
-        {ticket.tecnicoAsignado ? (
-          <span style={{ color: '#007bff' }}>{ticket.tecnicoAsignado}</span>
-        ) : tecnicoCercano ? (
-          <>
-            <span style={{ color: '#28a745' }}>{tecnicoCercano.nombre}</span>{' '}
-            <span style={{ fontSize: '12px', color: '#777' }}>
-              ({tecnicoCercano.distancia.toFixed(1)} km)
-            </span>
-          </>
-        ) : (
-          <span style={{ color: '#dc3545' }}>No se encontró técnico cercano</span>
-        )}
-      </p>
+{ticket.tipo !== 'toner' && (
+  <p>
+    <strong>
+      {ticket.tecnicoAsignado ? 'Técnico asignado:' : 'Técnico más cercano:'}
+    </strong>{' '}
+    {ticket.tecnicoAsignado ? (
+      <span style={{ color: '#007bff' }}>{ticket.tecnicoAsignado}</span>
+    ) : tecnicoCercano ? (
+      <>
+        <span style={{ color: '#28a745' }}>{tecnicoCercano.nombre}</span>{' '}
+        <span style={{ fontSize: '12px', color: '#777' }}>
+          ({tecnicoCercano.distancia.toFixed(1)} km)
+        </span>
+      </>
+    ) : (
+      <span style={{ color: '#dc3545' }}>No se encontró técnico cercano</span>
+    )}
+  </p>
+)}
 
       {!ticket.tecnicoAsignado && tecnicoCercano && (
         <button
