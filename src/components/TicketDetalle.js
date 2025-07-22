@@ -94,45 +94,52 @@ function TicketDetalle({ ticket }) {
       </p>
 
       {!ticket.tecnicoAsignado && tecnicoCercano && (
-        <button
-          onClick={async () => {
-            try {
-              const respuesta = await fetch(`https://copias-backend-production.up.railway.app/asignar-tecnico/${ticket._id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tecnicoId: tecnicoCercano.tecnicoId })
-              });
+  <button
+    onClick={async () => {
+      try {
+        const resTecnicos = await fetch('https://copias-backend-production.up.railway.app/tecnicos');
+        const listaTecnicos = await resTecnicos.json();
+        const tecnico = listaTecnicos.find(t => t.tecnicoId === tecnicoCercano.tecnicoId);
 
-              if (respuesta.ok) {
-                alert('✅ Técnico asignado correctamente');
-                window.location.reload();
-              } else {
-                alert('❌ No se pudo asignar el técnico');
-              }
-            } catch (err) {
-              console.error(err);
-              alert('⚠️ Error al asignar técnico');
-            }
-          }}
-          style={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            marginBottom: '15px',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-            transition: 'background 0.3s',
-          }}
-          onMouseOver={e => e.target.style.backgroundColor = '#218838'}
-          onMouseOut={e => e.target.style.backgroundColor = '#28a745'}
-        >
-          📍 Asignar técnico más cercano
-        </button>
-      )}
+        const respuesta = await fetch(`https://copias-backend-production.up.railway.app/asignar-tecnico/${ticket._id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tecnicoId: tecnicoCercano.tecnicoId,
+            tecnicoAsignado: tecnico?.nombre || tecnicoCercano.nombre || 'Técnico cercano'
+          })
+        });
+
+        if (respuesta.ok) {
+          alert('✅ Técnico asignado correctamente');
+          window.location.reload();
+        } else {
+          alert('❌ No se pudo asignar el técnico');
+        }
+      } catch (err) {
+        console.error(err);
+        alert('⚠️ Error al asignar técnico');
+      }
+    }}
+    style={{
+      backgroundColor: '#28a745',
+      color: 'white',
+      border: 'none',
+      padding: '10px 20px',
+      fontSize: '14px',
+      fontWeight: 'bold',
+      borderRadius: '8px',
+      cursor: 'pointer',
+      marginBottom: '15px',
+      boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+      transition: 'background 0.3s',
+    }}
+    onMouseOver={e => e.target.style.backgroundColor = '#218838'}
+    onMouseOut={e => e.target.style.backgroundColor = '#28a745'}
+  >
+    📍 Asignar técnico más cercano
+  </button>
+)}
 
       {ticket.latitud && ticket.longitud && (
         <p>
