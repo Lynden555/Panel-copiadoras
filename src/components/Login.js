@@ -14,30 +14,37 @@ import {
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 import { useNavigate } from 'react-router-dom'; // 🚀 Importamos navigate
+import { MenuItem, Select } from '@mui/material';
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate(); // 🚀 Hook para navegar
+  const [ciudad, setCiudad] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     try {
+      if (!ciudad) {
+        setError('Por favor selecciona una ciudad');
+        return;
+}
       const response = await fetch('https://copias-backend-production.up.railway.app/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, ciudad }),
       });
 
       const data = await response.json();
 
-      if (response.ok) {
+     if (response.ok) {
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('ciudad', ciudad); // 🔥 Guarda ciudad seleccionada
         onLogin();
-        navigate('/panel'); // 🚀 Redirigir al panel principal
+        navigate('/panel');
       } else {
         setError(data.error || 'Error al iniciar sesión');
       }
@@ -105,6 +112,18 @@ function Login({ onLogin }) {
                 {error}
               </Typography>
             )}
+
+            <Select
+                  fullWidth
+                  value={ciudad}
+                  onChange={(e) => setCiudad(e.target.value)}
+                  displayEmpty
+                  sx={{ mt: 2 }}
+                >
+                  <MenuItem value="" disabled>Selecciona tu ciudad</MenuItem>
+                  <MenuItem value="Tijuana">Tijuana</MenuItem>
+                  <MenuItem value="Mexicali">Mexicali</MenuItem>
+            </Select>
 
             <Button
               type="submit"

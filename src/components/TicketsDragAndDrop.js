@@ -22,7 +22,7 @@ function TicketsDragAndDrop({
   busquedaTicket,
   setBusquedaTicket,
 }) {
-
+const ciudadActual = localStorage.getItem('ciudad'); // 👈 Ciudad seleccionada en login
 const [bloquearRefresco, setBloquearRefresco] = useState(false);  
 const [tickets, setTickets] = useState([]);
 const [toners, setToners] = useState([]);
@@ -35,9 +35,11 @@ const cargarDatos = () => {
     fetch('https://copias-backend-production.up.railway.app/tecnicos').then(res => res.json())
   ])
     .then(([ticketsData, tonersData, tecnicosData]) => {
-      const ticketsOrdenados = ticketsData.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
-      const tonersOrdenados = tonersData.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+      const ticketsFiltrados = ticketsData.filter(t => t.ciudad === ciudadActual);
+      const tonersFiltrados = tonersData.filter(t => t.ciudad === ciudadActual);
 
+      const ticketsOrdenados = ticketsFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+      const tonersOrdenados = tonersFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
       const tonersNormalizados = tonersOrdenados.map(t => ({
         ...t,
         tipo: 'toner',
@@ -263,6 +265,10 @@ const getCardColor = (tipo, estado) => {
           width: '240px',
         }}
       />
+<span style={{ color: '#333', fontWeight: 'bold' }}>
+  Ciudad actual: {ciudadActual}
+</span>
+      
 
           <div style={{ marginLeft: 'auto'}}>
              <UserMenu/>
@@ -344,6 +350,9 @@ const getCardColor = (tipo, estado) => {
   <Typography variant="body2" color="textSecondary">
   Fecha: {new Date(ticket.fechaCreacion).toLocaleDateString()} - {new Date(ticket.fechaCreacion).toLocaleTimeString()}
 </Typography>
+  <Typography variant="caption" color="textSecondary">
+    Ciudad: {ticket.ciudad}
+  </Typography>
 
 </CardContent>
 
