@@ -7,6 +7,8 @@ function AgregarTecnico() {
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoBase64, setFotoBase64] = useState('');
 
+  const empresa = localStorage.getItem('empresa'); // 👈 Jala automáticamente la empresa
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFotoFile(file);
@@ -29,7 +31,13 @@ function AgregarTecnico() {
     fetch('https://copias-backend-production.up.railway.app/tecnicos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, tecnicoId: pin, fotoUrl: fotoBase64, ciudad }),
+      body: JSON.stringify({
+        nombre,
+        tecnicoId: pin,
+        fotoUrl: fotoBase64,
+        ciudad,
+        empresa, // 👈 Se manda automáticamente
+      }),
     })
       .then((response) => response.json())
       .then(() => {

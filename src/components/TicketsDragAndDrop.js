@@ -23,6 +23,7 @@ function TicketsDragAndDrop({
   setBusquedaTicket,
 }) {
 const ciudadActual = localStorage.getItem('ciudad'); // 👈 Ciudad seleccionada en login
+const empresaId = localStorage.getItem('empresaId');
 const [bloquearRefresco, setBloquearRefresco] = useState(false);  
 const [tickets, setTickets] = useState([]);
 const [toners, setToners] = useState([]);
@@ -35,10 +36,19 @@ const cargarDatos = () => {
     fetch('https://copias-backend-production.up.railway.app/tecnicos').then(res => res.json())
   ])
     .then(([ticketsData, tonersData, tecnicosData]) => {
-      const ticketsFiltrados = ticketsData.filter(t => t.ciudad === ciudadActual);
-      const tonersFiltrados = tonersData.filter(t => t.ciudad === ciudadActual);
-      const tecnicosFiltrados = tecnicosData.filter(t => t.ciudad?.trim().toLowerCase() === ciudadActual?.trim().toLowerCase());
+      const ticketsFiltrados = ticketsData.filter(
+        t => t.ciudad === ciudadActual && t.empresaId === empresaId
+      );
 
+      const tonersFiltrados = tonersData.filter(
+        t => t.ciudad === ciudadActual && t.empresaId === empresaId
+      );
+
+      const tecnicosFiltrados = tecnicosData.filter(
+        t =>
+          t.ciudad?.trim().toLowerCase() === ciudadActual?.trim().toLowerCase() &&
+          t.empresaId === empresaId
+      );
       const ticketsOrdenados = ticketsFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
       const tonersOrdenados = tonersFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
       const tonersNormalizados = tonersOrdenados.map(t => ({

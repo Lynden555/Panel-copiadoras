@@ -2,17 +2,20 @@ import React, { useEffect, useState } from 'react';
 
 function TecnicosList({ onAsignarTecnico, ticketSeleccionado }) {
   const [tecnicos, setTecnicos] = useState([]);
-  const ciudadActual = localStorage.getItem('ciudad'); // ✅ Solo aquí, y se reutiliza
+  const ciudadActual = localStorage.getItem('ciudad');
+  const empresaId = localStorage.getItem('empresaId'); // ✅ NUEVO
 
   useEffect(() => {
     fetch('https://copias-backend-production.up.railway.app/tecnicos')
       .then(response => response.json())
       .then(data => {
-        const filtrados = data.filter(t => t.ciudad === ciudadActual);
+        const filtrados = data.filter(
+          t => t.ciudad === ciudadActual && t.empresaId === empresaId // ✅ FILTRAMOS POR CIUDAD Y EMPRESA
+        );
         setTecnicos(filtrados);
       })
       .catch(error => console.error('Error al obtener técnicos:', error));
-  }, [ciudadActual]); // ✅ sigue bien
+  }, [ciudadActual, empresaId]);
 
   const handleAsignar = (tecnico) => {
     if (!ticketSeleccionado) {
