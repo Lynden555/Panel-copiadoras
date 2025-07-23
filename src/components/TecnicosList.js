@@ -2,18 +2,17 @@ import React, { useEffect, useState } from 'react';
 
 function TecnicosList({ onAsignarTecnico, ticketSeleccionado }) {
   const [tecnicos, setTecnicos] = useState([]);
-  const ciudadActual = localStorage.getItem('ciudad'); // 👈 Obtenemos la ciudad actual del usuario logeado
+  const ciudadActual = localStorage.getItem('ciudad'); // ✅ Solo aquí, y se reutiliza
 
   useEffect(() => {
     fetch('https://copias-backend-production.up.railway.app/tecnicos')
       .then(response => response.json())
       .then(data => {
-        // 🔍 Filtramos por ciudad
         const filtrados = data.filter(t => t.ciudad === ciudadActual);
         setTecnicos(filtrados);
       })
       .catch(error => console.error('Error al obtener técnicos:', error));
-  }, [ciudadActual]);
+  }, [ciudadActual]); // ✅ sigue bien
 
   const handleAsignar = (tecnico) => {
     if (!ticketSeleccionado) {
@@ -29,7 +28,7 @@ function TecnicosList({ onAsignarTecnico, ticketSeleccionado }) {
       body: JSON.stringify({
         estado: 'Asignado',
         tecnicoAsignado: tecnico.nombre,
-        tecnicoId: tecnico.tecnicoId, // opcional si lo usas
+        tecnicoId: tecnico.tecnicoId,
       }),
     })
       .then(response => response.json())
