@@ -37,6 +37,7 @@ const cargarDatos = () => {
     .then(([ticketsData, tonersData, tecnicosData]) => {
       const ticketsFiltrados = ticketsData.filter(t => t.ciudad === ciudadActual);
       const tonersFiltrados = tonersData.filter(t => t.ciudad === ciudadActual);
+      const tecnicosFiltrados = tecnicosData.filter(t => t.ciudad?.trim().toLowerCase() === ciudadActual?.trim().toLowerCase());
 
       const ticketsOrdenados = ticketsFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
       const tonersOrdenados = tonersFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
@@ -52,10 +53,9 @@ const combinadosOrdenados = [
   ...tonersNormalizados
 ].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
 
-setTickets(combinadosOrdenados);
-
+      setTickets(combinadosOrdenados);
       setToners(tonersOrdenados);
-      setTecnicos(tecnicosData);
+      setTecnicos(tecnicosFiltrados);
     })
     .catch(error => console.error('Error al cargar datos:', error));
 };
