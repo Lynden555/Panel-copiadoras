@@ -7,7 +7,7 @@ function AgregarTecnico() {
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoBase64, setFotoBase64] = useState('');
 
-  const empresa = localStorage.getItem('empresa'); // 👈 Jala automáticamente la empresa
+  const empresaId = localStorage.getItem('empresaId'); // 👈 Jala automáticamente la empresa
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -36,7 +36,7 @@ function AgregarTecnico() {
         tecnicoId: pin,
         fotoUrl: fotoBase64,
         ciudad,
-        empresa, // 👈 Se manda automáticamente
+        empresaId, // 👈 Se manda automáticamente
       }),
     })
       .then((response) => response.json())
