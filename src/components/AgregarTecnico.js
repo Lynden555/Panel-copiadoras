@@ -101,6 +101,7 @@ function AgregarTecnico() {
             <option value="">Selecciona una ciudad</option>
             <option value="Mexicali">Mexicali</option>
             <option value="Tijuana">Tijuana</option>
+            <option value="Ensenada">Ensenada</option>
           </select>
         </div>
 
