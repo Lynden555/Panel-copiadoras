@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 function AgregarTecnico() {
   const [nombre, setNombre] = useState('');
   const [pin, setPin] = useState('');
+  const [ciudad, setCiudad] = useState('');
   const [fotoFile, setFotoFile] = useState(null);
   const [fotoBase64, setFotoBase64] = useState('');
 
@@ -18,7 +19,7 @@ function AgregarTecnico() {
   };
 
   const handlePinChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ''); // solo dígitos
+    const value = e.target.value.replace(/\D/g, '');
     if (value.length <= 4) setPin(value);
   };
 
@@ -28,13 +29,14 @@ function AgregarTecnico() {
     fetch('https://copias-backend-production.up.railway.app/tecnicos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre, tecnicoId: pin, fotoUrl: fotoBase64 }),
+      body: JSON.stringify({ nombre, tecnicoId: pin, fotoUrl: fotoBase64, ciudad }),
     })
       .then((response) => response.json())
-      .then((data) => {
+      .then(() => {
         alert('Técnico agregado correctamente');
         setNombre('');
         setPin('');
+        setCiudad('');
         setFotoFile(null);
         setFotoBase64('');
       })
@@ -64,6 +66,7 @@ function AgregarTecnico() {
             required
           />
         </div>
+
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>PIN (4 dígitos):</label>
           <input
@@ -75,6 +78,21 @@ function AgregarTecnico() {
             required
           />
         </div>
+
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Ciudad:</label>
+          <select
+            value={ciudad}
+            onChange={(e) => setCiudad(e.target.value)}
+            required
+            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
+          >
+            <option value="">Selecciona una ciudad</option>
+            <option value="Mexicali">Mexicali</option>
+            <option value="Tijuana">Tijuana</option>
+          </select>
+        </div>
+
         <div style={{ marginBottom: '15px' }}>
           <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Foto (desde PC):</label>
           <input type="file" accept="image/*" onChange={handleFileChange} required />
@@ -84,6 +102,7 @@ function AgregarTecnico() {
             </div>
           )}
         </div>
+
         <button type="submit" style={{
           padding: '10px 20px',
           fontSize: '16px',
