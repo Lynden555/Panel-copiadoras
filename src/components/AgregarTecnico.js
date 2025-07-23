@@ -5,19 +5,12 @@ function AgregarTecnico() {
   const [pin, setPin] = useState('');
   const [ciudad, setCiudad] = useState('');
   const [fotoFile, setFotoFile] = useState(null);
-  const [fotoBase64, setFotoBase64] = useState('');
 
-  const empresaId = localStorage.getItem('empresaId'); // 👈 Jala automáticamente la empresa
+  const empresaId = localStorage.getItem('empresaId');
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFotoFile(file);
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setFotoBase64(reader.result);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handlePinChange = (e) => {
@@ -25,32 +18,42 @@ function AgregarTecnico() {
     if (value.length <= 4) setPin(value);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    fetch('https://copias-backend-production.up.railway.app/tecnicos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        nombre,
-        tecnicoId: pin,
-        fotoUrl: fotoBase64,
-        ciudad,
-        empresaId, // 👈 Se manda automáticamente
-      }),
-    })
-      .then((response) => response.json())
-      .then(() => {
+    if (!fotoFile) {
+      alert('Debes seleccionar una foto');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('nombre', nombre);
+    formData.append('tecnicoId', pin);
+    formData.append('ciudad', ciudad);
+    formData.append('empresaId', empresaId);
+    formData.append('foto', fotoFile);
+
+    try {
+      const response = await fetch('https://copias-backend-production.up.railway.app/tecnicos', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
         alert('Técnico agregado correctamente');
         setNombre('');
         setPin('');
         setCiudad('');
         setFotoFile(null);
-        setFotoBase64('');
-      })
-      .catch((error) => {
-        console.error('Error al agregar técnico:', error);
-      });
+      } else {
+        alert(data.error || 'Error al agregar técnico');
+      }
+    } catch (error) {
+      console.error('Error al agregar técnico:', error);
+      alert('Error al agregar técnico');
+    }
   };
 
   return (
@@ -66,29 +69,29 @@ function AgregarTecnico() {
       <h2 style={{ textAlign: 'center', fontSize: '24px', marginBottom: '20px' }}>Agregar Técnico</h2>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Nombre:</label>
+          <label>Nombre:</label>
           <input
-            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
             value={nombre}
             onChange={(e) => setNombre(e.target.value)}
             required
+            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
           />
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>PIN (4 dígitos):</label>
+          <label>PIN (4 dígitos):</label>
           <input
             type="text"
             value={pin}
             onChange={handlePinChange}
-            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
             placeholder="Ej: 1234"
             required
+            style={{ width: '100%', padding: '8px', fontSize: '16px' }}
           />
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Ciudad:</label>
+          <label>Ciudad:</label>
           <select
             value={ciudad}
             onChange={(e) => setCiudad(e.target.value)}
@@ -102,11 +105,11 @@ function AgregarTecnico() {
         </div>
 
         <div style={{ marginBottom: '15px' }}>
-          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '5px' }}>Foto (desde PC):</label>
+          <label>Foto (desde PC):</label>
           <input type="file" accept="image/*" onChange={handleFileChange} required />
-          {fotoBase64 && (
+          {fotoFile && (
             <div style={{ marginTop: '10px' }}>
-              <img src={fotoBase64} alt="Preview" style={{ width: '100px', borderRadius: '8px' }} />
+              <img src={URL.createObjectURL(fotoFile)} alt="Preview" style={{ width: '100px', borderRadius: '8px' }} />
             </div>
           )}
         </div>
