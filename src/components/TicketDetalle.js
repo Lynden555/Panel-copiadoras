@@ -28,9 +28,17 @@ function TicketDetalle({ ticket }) {
 
   if (!ticket) return null;
 
-  const fotos = ticket.fotos || [];
-  const fotosTecnico = fotos.filter(f => f.includes('fotos_tecnico'));
-  const fotosCliente = fotos.filter(f => !f.includes('fotos_tecnico'));
+if (!ticket) return null;
+
+let fotos = ticket.fotos || [];
+
+// 🔥 Agrega la foto del técnico si viene en el campo tecnicoFoto
+if (ticket.tecnicoFoto) {
+  fotos = [...fotos, ticket.tecnicoFoto];
+}
+
+const fotosTecnico = fotos.filter(f => f.includes('tecnico'));
+const fotosCliente = fotos.filter(f => !f.includes('tecnico'));
 
   const abrirGaleria = (index) => {
     setIndiceImagen(index);
