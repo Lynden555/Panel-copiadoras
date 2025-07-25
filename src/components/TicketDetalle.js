@@ -181,7 +181,7 @@ function TicketDetalle({ ticket }) {
       </div>
 
       {/* DERECHA: Comentario y fotos del técnico */}
-      {ticket.estado === 'Finalizado' && (
+      {ticket.estado === 'Terminado' && (
         <div style={{
           width: '320px',
           backgroundColor: '#F3E8FF',
