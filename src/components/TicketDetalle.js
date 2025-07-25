@@ -5,10 +5,10 @@ function TicketDetalle({ ticket }) {
   const [indiceImagen, setIndiceImagen] = useState(0);
   const [tecnicoCercano, setTecnicoCercano] = useState(null);
 
-useEffect(() => {
-  const obtenerTecnicoCercano = async () => {
-    if (ticket.tipo === 'toner') return; // 🔒 no buscar técnico para pedidos de tóner
-    if (!ticket.latitud || !ticket.longitud) return;
+  useEffect(() => {
+    const obtenerTecnicoCercano = async () => {
+      if (ticket.tipo === 'toner') return;
+      if (!ticket.latitud || !ticket.longitud) return;
 
       try {
         const respuesta = await fetch(
@@ -29,6 +29,8 @@ useEffect(() => {
   if (!ticket) return null;
 
   const fotos = ticket.fotos || [];
+  const fotosTecnico = fotos.filter(f => f.includes('fotos_tecnico'));
+  const fotosCliente = fotos.filter(f => !f.includes('fotos_tecnico'));
 
   const abrirGaleria = (index) => {
     setIndiceImagen(index);
@@ -52,128 +54,178 @@ useEffect(() => {
   };
 
   return (
-    <div style={{
-      borderTop: '2px solid #ddd',
-      padding: '30px 40px',
-      marginTop: '10px',
-      marginLeft: '60px',
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '15px',
-      color: '#333',
-      lineHeight: '1.6',
-    }}>
-      <h2>Detalle del {ticket.tipo === 'toner' ? 'Pedido de Tóner' : 'Ticket'}</h2>
-      <p><strong>Cliente:</strong> {ticket.clienteNombre}</p>
-      <p><strong>Empresa:</strong> {ticket.empresa}</p>
-      <p><strong>Área:</strong> {ticket.area}</p>
-      {ticket.telefono && <p><strong>Teléfono:</strong> {ticket.telefono}</p>}
+    <div style={{ display: 'flex', padding: '30px 40px', marginTop: '10px', fontFamily: 'Inter, sans-serif' }}>
+      
+      {/* IZQUIERDA: Info principal del ticket */}
+      <div style={{ flex: 1, paddingRight: '40px', fontSize: '15px', color: '#333', lineHeight: '1.6' }}>
+        <h2>Detalle del {ticket.tipo === 'toner' ? 'Pedido de Tóner' : 'Ticket'}</h2>
+        <p><strong>Cliente:</strong> {ticket.clienteNombre}</p>
+        <p><strong>Empresa:</strong> {ticket.empresa}</p>
+        <p><strong>Área:</strong> {ticket.area}</p>
+        {ticket.telefono && <p><strong>Teléfono:</strong> {ticket.telefono}</p>}
 
-      {ticket.tipo === 'toner' ? (
-        <p><strong>Impresora:</strong> {ticket.impresora}</p>
-      ) : (
-        <p><strong>Descripción de la falla:</strong> {ticket.descripcionFalla}</p>
-      )}
+        {ticket.tipo === 'toner' ? (
+          <p><strong>Impresora:</strong> {ticket.impresora}</p>
+        ) : (
+          <p><strong>Descripción de la falla:</strong> {ticket.descripcionFalla}</p>
+        )}
 
-      <p><strong>Estado:</strong> {ticket.estado}</p>
+        <p><strong>Estado:</strong> {ticket.estado}</p>
 
-{ticket.tipo !== 'toner' && (
-  <p>
-    <strong>
-      {ticket.tecnicoAsignado ? 'Técnico asignado:' : 'Técnico más cercano:'}
-    </strong>{' '}
-    {ticket.tecnicoAsignado ? (
-      <span style={{ color: '#007bff' }}>{ticket.tecnicoAsignado}</span>
-    ) : tecnicoCercano ? (
-      <>
-        <span style={{ color: '#28a745' }}>{tecnicoCercano.nombre}</span>{' '}
-        <span style={{ fontSize: '12px', color: '#777' }}>
-          ({tecnicoCercano.distancia.toFixed(1)} km)
-        </span>
-      </>
-    ) : (
-      <span style={{ color: '#dc3545' }}>No se encontró técnico cercano</span>
-    )}
-  </p>
-)}
+        {ticket.tipo !== 'toner' && (
+          <p>
+            <strong>
+              {ticket.tecnicoAsignado ? 'Técnico asignado:' : 'Técnico más cercano:'}
+            </strong>{' '}
+            {ticket.tecnicoAsignado ? (
+              <span style={{ color: '#007bff' }}>{ticket.tecnicoAsignado}</span>
+            ) : tecnicoCercano ? (
+              <>
+                <span style={{ color: '#28a745' }}>{tecnicoCercano.nombre}</span>{' '}
+                <span style={{ fontSize: '12px', color: '#777' }}>
+                  ({tecnicoCercano.distancia.toFixed(1)} km)
+                </span>
+              </>
+            ) : (
+              <span style={{ color: '#dc3545' }}>No se encontró técnico cercano</span>
+            )}
+          </p>
+        )}
 
-      {!ticket.tecnicoAsignado && tecnicoCercano && (
-        <button
-          onClick={async () => {
-            try {
-              const respuesta = await fetch(`https://copias-backend-production.up.railway.app/tickets/${ticket._id}`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  tecnicoAsignado: tecnicoCercano.nombre,
-                  estado: 'Asignado',
-                })
-              });
+        {!ticket.tecnicoAsignado && tecnicoCercano && (
+          <button
+            onClick={async () => {
+              try {
+                const respuesta = await fetch(`https://copias-backend-production.up.railway.app/tickets/${ticket._id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    tecnicoAsignado: tecnicoCercano.nombre,
+                    estado: 'Asignado',
+                  })
+                });
 
-              if (respuesta.ok) {
-                alert('✅ Técnico asignado correctamente');
-                window.location.reload();
-              } else {
-                alert('❌ No se pudo asignar el técnico');
+                if (respuesta.ok) {
+                  alert('✅ Técnico asignado correctamente');
+                  window.location.reload();
+                } else {
+                  alert('❌ No se pudo asignar el técnico');
+                }
+              } catch (err) {
+                console.error(err);
+                alert('⚠️ Error al asignar técnico');
               }
-            } catch (err) {
-              console.error(err);
-              alert('⚠️ Error al asignar técnico');
-            }
-          }}
-          style={{
-            backgroundColor: '#28a745',
-            color: 'white',
-            border: 'none',
-            padding: '10px 20px',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            marginBottom: '15px',
-            boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-            transition: 'background 0.3s',
-          }}
-          onMouseOver={e => e.target.style.backgroundColor = '#218838'}
-          onMouseOut={e => e.target.style.backgroundColor = '#28a745'}
-        >
-          📍 Asignar técnico más cercano
-        </button>
-      )}
-
-      {ticket.latitud && ticket.longitud && (
-        <p>
-          <strong>Ubicación:</strong>{' '}
-          <a
-            href={`https://www.google.com/maps?q=${ticket.latitud},${ticket.longitud}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#007bff', textDecoration: 'underline' }}
+            }}
+            style={{
+              backgroundColor: '#28a745',
+              color: 'white',
+              border: 'none',
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              marginBottom: '15px',
+              boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+              transition: 'background 0.3s',
+            }}
+            onMouseOver={e => e.target.style.backgroundColor = '#218838'}
+            onMouseOut={e => e.target.style.backgroundColor = '#28a745'}
           >
-            Ver en Google Maps
-          </a>
-        </p>
-      )}
+            📍 Asignar técnico más cercano
+          </button>
+        )}
 
-      {ticket.fotos?.length > 0 && (
-        <div style={{ marginTop: '10px' }}>
-          <p><strong>Fotos adjuntas:</strong></p>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            {ticket.fotos.map((foto, index) => (
-              <img
-                key={index}
-                src={foto}
-                alt={`Foto ${index + 1}`}
-                onClick={() => abrirGaleria(index)}
-                style={{
-                  width: '100px', height: '100px',
-                  objectFit: 'cover', cursor: 'pointer', borderRadius: '5px'
-                }}
-              />
-            ))}
+        {ticket.latitud && ticket.longitud && (
+          <p>
+            <strong>Ubicación:</strong>{' '}
+            <a
+              href={`https://www.google.com/maps?q=${ticket.latitud},${ticket.longitud}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#007bff', textDecoration: 'underline' }}
+            >
+              Ver en Google Maps
+            </a>
+          </p>
+        )}
+
+        {fotosCliente.length > 0 && (
+          <div style={{ marginTop: '10px' }}>
+            <p><strong>📷 Fotos del Cliente:</strong></p>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {fotosCliente.map((foto, index) => (
+                <img
+                  key={index}
+                  src={foto}
+                  alt={`Foto ${index + 1}`}
+                  onClick={() => abrirGaleria(fotos.indexOf(foto))}
+                  style={{
+                    width: '100px', height: '100px',
+                    objectFit: 'cover', cursor: 'pointer', borderRadius: '5px'
+                  }}
+                />
+              ))}
+            </div>
           </div>
+        )}
+      </div>
+
+      {/* DERECHA: Comentario y fotos del técnico */}
+      {ticket.estado === 'Finalizado' && (
+        <div style={{
+          width: '320px',
+          backgroundColor: '#F3E8FF',
+          borderRadius: '12px',
+          padding: '20px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.1)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '20px'
+        }}>
+          {ticket.comentarioTecnico && (
+            <div>
+              <p style={{ fontWeight: 'bold', color: '#4B0082' }}>💬 Comentario del Técnico:</p>
+              <div style={{
+                background: '#fff',
+                padding: '12px',
+                borderRadius: '8px',
+                fontStyle: 'italic',
+                color: '#444',
+                borderLeft: '4px solid #4B0082'
+              }}>
+                {ticket.comentarioTecnico}
+              </div>
+            </div>
+          )}
+
+          {fotosTecnico.length > 0 && (
+            <div>
+              <p style={{ fontWeight: 'bold', color: '#4B0082' }}>🛠 Fotos del Técnico:</p>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {fotosTecnico.map((foto, index) => (
+                  <img
+                    key={index}
+                    src={foto}
+                    alt={`Técnico ${index + 1}`}
+                    onClick={() => abrirGaleria(fotos.indexOf(foto))}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      border: '2px solid #4B0082'
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
+      {/* MODAL DE IMAGEN GRANDE */}
       {imagenSeleccionada && (
         <div style={{
           position: 'fixed',
