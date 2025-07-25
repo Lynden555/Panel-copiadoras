@@ -54,16 +54,20 @@ function TicketDetalle({ ticket }) {
   };
 
   return (
-    <div style={{
-      borderTop: '2px solid #ddd',
-      padding: '30px 40px',
-      marginTop: '10px',
-      marginLeft: '60px',
-      fontFamily: 'Inter, sans-serif',
-      fontSize: '15px',
-      color: '#333',
-      lineHeight: '1.6',
-    }}>
+<div style={{
+  display: 'flex',
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: '40px',
+  borderTop: '2px solid #ddd',
+  padding: '30px 40px',
+  marginTop: '10px',
+  marginLeft: '60px',
+  fontFamily: 'Inter, sans-serif',
+  fontSize: '15px',
+  color: '#333',
+  lineHeight: '1.6',
+}}>
       
       {/* IZQUIERDA: Info principal del ticket */}
       <div style={{ flex: 1, paddingRight: '40px', fontSize: '15px', color: '#333', lineHeight: '1.6' }}>
@@ -183,7 +187,9 @@ function TicketDetalle({ ticket }) {
       {/* DERECHA: Comentario y fotos del técnico */}
       {ticket.estado === 'Terminado' && (
         <div style={{
-          width: '320px',
+          flex: '1',
+          minWidth: '300px',
+          maxWidth: '400px',
           backgroundColor: '#F3E8FF',
           borderRadius: '12px',
           padding: '20px',
