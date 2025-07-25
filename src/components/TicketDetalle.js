@@ -54,7 +54,15 @@ function TicketDetalle({ ticket }) {
   };
 
   return (
-    <div style={{ display: 'flex', padding: '30px 40px', marginTop: '10px', fontFamily: 'Inter, sans-serif' }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: '40px',
+          padding: '30px 40px',
+          marginTop: '10px',
+          fontFamily: 'Inter, sans-serif'
+        }}>
       
       {/* IZQUIERDA: Info principal del ticket */}
       <div style={{ flex: 1, paddingRight: '40px', fontSize: '15px', color: '#333', lineHeight: '1.6' }}>
