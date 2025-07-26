@@ -31,27 +31,29 @@ if (!ticket) return null;
 
 const fotosCliente = ticket.fotos || [];
 const fotosTecnico = ticket.fotosTecnico || [];
+const todasLasFotos = fotosCliente.concat(fotosTecnico);
 
-  const abrirGaleria = (index) => {
-    setIndiceImagen(index);
-    setImagenSeleccionada(fotos[index]);
-  };
+const abrirGaleria = (index) => {
+  setIndiceImagen(index);
+  setImagenSeleccionada(todasLasFotos[index]);
+};
+
+const imagenAnterior = () => {
+  const nuevoIndice = (indiceImagen - 1 + todasLasFotos.length) % todasLasFotos.length;
+  setIndiceImagen(nuevoIndice);
+  setImagenSeleccionada(todasLasFotos[nuevoIndice]);
+};
+
+const imagenSiguiente = () => {
+  const nuevoIndice = (indiceImagen + 1) % todasLasFotos.length;
+  setIndiceImagen(nuevoIndice);
+  setImagenSeleccionada(todasLasFotos[nuevoIndice]);
+};
 
   const cerrarGaleria = () => {
     setImagenSeleccionada(null);
   };
 
-  const imagenAnterior = () => {
-    const nuevoIndice = (indiceImagen - 1 + fotos.length) % fotos.length;
-    setIndiceImagen(nuevoIndice);
-    setImagenSeleccionada(fotos[nuevoIndice]);
-  };
-
-  const imagenSiguiente = () => {
-    const nuevoIndice = (indiceImagen + 1) % fotos.length;
-    setIndiceImagen(nuevoIndice);
-    setImagenSeleccionada(fotos[nuevoIndice]);
-  };
 
   return (
 <div style={{
@@ -172,7 +174,7 @@ const fotosTecnico = ticket.fotosTecnico || [];
                   key={index}
                   src={foto}
                   alt={`Foto ${index + 1}`}
-                  onClick={() => abrirGaleria(fotos.indexOf(foto))}
+                  onClick={() => abrirGaleria(todasLasFotos.indexOf(foto))}
                   style={{
                     width: '100px', height: '100px',
                     objectFit: 'cover', cursor: 'pointer', borderRadius: '5px'
@@ -223,7 +225,7 @@ const fotosTecnico = ticket.fotosTecnico || [];
                     key={index}
                     src={foto}
                     alt={`Técnico ${index + 1}`}
-                    onClick={() => abrirGaleria(fotos.indexOf(foto))}
+                    onClick={() => abrirGaleria(todasLasFotos.indexOf(foto))}
                     style={{
                       width: '80px',
                       height: '80px',
