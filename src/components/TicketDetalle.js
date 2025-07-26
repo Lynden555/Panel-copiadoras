@@ -26,7 +26,6 @@ function TicketDetalle({ ticket }) {
     obtenerTecnicoCercano();
   }, [ticket.latitud, ticket.longitud]);
 
-  if (!ticket) return null;
 
 if (!ticket) return null;
 
