@@ -9,7 +9,7 @@ import EditarTecnico from './components/EditarTecnico';
 import TicketDetalle from './components/TicketDetalle';
 import Login from './components/Login';
 import RequireAuth from './components/RequireAuth'; // ✅ nuevo
-import AppCliente from './pages/AppCliente';
+import AppCliente from './components/AppCliente';
 
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
