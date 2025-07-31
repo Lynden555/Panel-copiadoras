@@ -1,4 +1,4 @@
-// src/pages/AppCliente.jsx
+
 import React from 'react';
 import './AppCliente.css';
 
@@ -19,7 +19,7 @@ const AppCliente = () => {
       </div>
 
       <a 
-        href="/Grape-Clientes.apk" 
+        href="/GrapeCliente.apk" 
         download 
         className="boton-descarga"
       >
