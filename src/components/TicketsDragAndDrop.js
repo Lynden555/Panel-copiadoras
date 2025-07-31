@@ -33,7 +33,7 @@ const [prevTickets, setPrevTickets] = useState([]);
 const [prevToners, setPrevToners] = useState([]);
 
 const reproducirSonido = () => {
-const audio = new Audio('../noti/notificacion.mp3');
+const audio = new Audio('./noti/notificacion.mp3');
 audio.play().catch(error => console.log('🔇 Error al reproducir sonido:', error));
 };
 
