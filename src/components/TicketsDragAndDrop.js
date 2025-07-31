@@ -22,12 +22,20 @@ function TicketsDragAndDrop({
   busquedaTicket,
   setBusquedaTicket,
 }) {
+
 const ciudadActual = localStorage.getItem('ciudad'); // 👈 Ciudad seleccionada en login
 const empresaId = localStorage.getItem('empresaId');
 const [bloquearRefresco, setBloquearRefresco] = useState(false);  
 const [tickets, setTickets] = useState([]);
 const [toners, setToners] = useState([]);
 const [tecnicos, setTecnicos] = useState([]);
+const [prevTickets, setPrevTickets] = useState([]);
+const [prevToners, setPrevToners] = useState([]);
+
+const reproducirSonido = () => {
+const audio = new Audio('../noti/notificacion.mp3');
+audio.play().catch(error => console.log('🔇 Error al reproducir sonido:', error));
+};
 
 const cargarDatos = () => {
   Promise.all([
@@ -63,6 +71,19 @@ const combinadosOrdenados = [
   ...tonersNormalizados
 ].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
 
+// 🔔 Verificar si llegaron nuevos tickets
+if (prevTickets.length && ticketsOrdenados.length > prevTickets.length) {
+  reproducirSonido();
+}
+
+// 🔔 Verificar si llegaron nuevos tóners
+if (prevToners.length && tonersOrdenados.length > prevToners.length) {
+  reproducirSonido();
+}
+
+      setPrevTickets(ticketsOrdenados);
+      setPrevToners(tonersOrdenados);
+
       setTickets(combinadosOrdenados);
       setToners(tonersOrdenados);
       setTecnicos(tecnicosFiltrados);
@@ -71,7 +92,7 @@ const combinadosOrdenados = [
 };
 
 useEffect(() => {
-  const cargarSiNoBloqueado = () => {
+const cargarSiNoBloqueado = () => {
     if (!bloquearRefresco) {
       cargarDatos();
     }
