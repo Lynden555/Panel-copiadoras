@@ -166,6 +166,7 @@ useEffect(() => {
         />
 
         <Route path="/app-cliente" element={<AppCliente />} />
+        <Route path="/app-tecnico" element={<AppTecnico />} />
 
         {/* Redireccionamiento general */}
         <Route path="/" element={<Navigate to="/login" />} />
