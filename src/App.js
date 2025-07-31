@@ -10,6 +10,7 @@ import TicketDetalle from './components/TicketDetalle';
 import Login from './components/Login';
 import RequireAuth from './components/RequireAuth'; // ✅ nuevo
 import AppCliente from './components/AppCliente';
+import AppTecnico from './components/AppTecnico';
 
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
