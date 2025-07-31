@@ -12,6 +12,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import UndoIcon from '@mui/icons-material/Undo';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import UserMenu from './UserMenu'; 
+import { Howl } from 'howler';
 
 
 function TicketsDragAndDrop({
@@ -33,68 +34,96 @@ const [prevTickets, setPrevTickets] = useState([]);
 const [prevToners, setPrevToners] = useState([]);
 
 const reproducirSonido = () => {
-const audio = new Audio('/notificacion.mp3');
-audio.play().catch(error => console.log('🔇 Error al reproducir sonido:', error));
+  const sonido = new Howl({
+    src: ['/notificacion.mp3'],
+    volume: 1.0,
+  });
+
+  sonido.play();
 };
 
-const cargarDatos = () => {
-  Promise.all([
-    fetch('https://copias-backend-production.up.railway.app/tickets').then(res => res.json()),
-    fetch('https://copias-backend-production.up.railway.app/toners').then(res => res.json()),
-    fetch('https://copias-backend-production.up.railway.app/tecnicos').then(res => res.json())
-  ])
-    .then(([ticketsData, tonersData, tecnicosData]) => {
-      const ticketsFiltrados = ticketsData.filter(
-        t => t.ciudad === ciudadActual && t.empresaId === empresaId
-      );
+const cargarDatos = async () => {
+  try {
+    const [ticketsData, tonersData, tecnicosData] = await Promise.all([
+      fetch('https://copias-backend-production.up.railway.app/tickets').then(res => res.json()),
+      fetch('https://copias-backend-production.up.railway.app/toners').then(res => res.json()),
+      fetch('https://copias-backend-production.up.railway.app/tecnicos').then(res => res.json())
+    ]);
 
-      const tonersFiltrados = tonersData.filter(
-        t => t.ciudad === ciudadActual && t.empresaId === empresaId
-      );
+    const ticketsFiltrados = ticketsData.filter(
+      t => t.ciudad === ciudadActual && t.empresaId === empresaId
+    );
 
-      const tecnicosFiltrados = tecnicosData.filter(
-        t =>
-          t.ciudad?.trim().toLowerCase() === ciudadActual?.trim().toLowerCase() &&
-          t.empresaId === empresaId
-      );
-      const ticketsOrdenados = ticketsFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
-      const tonersOrdenados = tonersFiltrados.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
-      const tonersNormalizados = tonersOrdenados.map(t => ({
-        ...t,
-        tipo: 'toner',
-        descripcionFalla: 'Solicitud de tóner', // 👈 agregamos esto
-        fechaCreacion: t.fechaCreacion || new Date().toISOString(), // por si acaso
-      }));
+    const tonersFiltrados = tonersData.filter(
+      t => t.ciudad === ciudadActual && t.empresaId === empresaId
+    );
 
-const combinadosOrdenados = [
-  ...ticketsOrdenados.map(t => ({ ...t, tipo: 'ticket' })),
-  ...tonersNormalizados
-].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+    const tecnicosFiltrados = tecnicosData.filter(
+      t =>
+        t.ciudad?.trim().toLowerCase() === ciudadActual?.trim().toLowerCase() &&
+        t.empresaId === empresaId
+    );
 
-// 🔔 Verificar si llegaron nuevos tickets
-if (prevTickets.length && ticketsOrdenados.length > prevTickets.length) {
-  reproducirSonido();
-}
+    const ticketsOrdenados = ticketsFiltrados.sort(
+      (a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion)
+    );
 
-// 🔔 Verificar si llegaron nuevos tóners
-if (prevToners.length && tonersOrdenados.length > prevToners.length) {
-  reproducirSonido();
-}
+    const tonersOrdenados = tonersFiltrados.sort(
+      (a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion)
+    );
 
-      setPrevTickets(ticketsOrdenados);
-      setPrevToners(tonersOrdenados);
+    const tonersNormalizados = tonersOrdenados.map(t => ({
+      ...t,
+      tipo: 'toner',
+      descripcionFalla: 'Solicitud de tóner',
+      fechaCreacion: t.fechaCreacion || new Date().toISOString(),
+    }));
 
-      setTickets(combinadosOrdenados);
-      setToners(tonersOrdenados);
-      setTecnicos(tecnicosFiltrados);
-    })
-    .catch(error => console.error('Error al cargar datos:', error));
+    const combinadosOrdenados = [
+      ...ticketsOrdenados.map(t => ({ ...t, tipo: 'ticket' })),
+      ...tonersNormalizados
+    ].sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
+
+    // Actualiza los estados globales
+    setPrevTickets(ticketsOrdenados);
+    setPrevToners(tonersOrdenados);
+    setTickets(combinadosOrdenados);
+    setToners(tonersOrdenados);
+    setTecnicos(tecnicosFiltrados);
+
+    // 🚀 Devuelve los datos para que el useEffect compare
+    return {
+      nuevosTickets: ticketsOrdenados,
+      nuevosToners: tonersOrdenados,
+    };
+  } catch (error) {
+    console.error('Error al cargar datos:', error);
+    return {
+      nuevosTickets: [],
+      nuevosToners: [],
+    };
+  }
 };
 
 useEffect(() => {
-const cargarSiNoBloqueado = () => {
+  let ticketsPrevios = [];
+  let tonersPrevios = [];
+
+  const cargarSiNoBloqueado = async () => {
     if (!bloquearRefresco) {
-      cargarDatos();
+      const { nuevosTickets, nuevosToners } = await cargarDatos(); // ⬅️ ya tienes esta función
+
+      // Solo compara si ya había datos antes
+      if (ticketsPrevios.length && nuevosTickets.length > ticketsPrevios.length) {
+        reproducirSonido();
+      }
+
+      if (tonersPrevios.length && nuevosToners.length > tonersPrevios.length) {
+        reproducirSonido();
+      }
+
+      ticketsPrevios = nuevosTickets;
+      tonersPrevios = nuevosToners;
     }
   };
 
