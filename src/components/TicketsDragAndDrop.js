@@ -37,6 +37,7 @@ const reproducirSonido = () => {
   const sonido = new Howl({
     src: ['/notificacion.mp3'],
     volume: 1.0,
+    html5: true,
   });
 
   sonido.play();
@@ -109,11 +110,30 @@ useEffect(() => {
   let ticketsPrevios = [];
   let tonersPrevios = [];
 
+  // 🔓 Desbloquear audio al primer clic del usuario
+  const habilitarSonido = () => {
+    const sonido = new Howl({
+      src: ['/notificacion.mp3'],
+      volume: 0,
+      html5: true,
+    });
+
+    sonido.once('play', () => {
+      sonido.stop();
+    });
+    sonido.play();
+
+    console.log('🎧 Sonido desbloqueado');
+    window.removeEventListener('click', habilitarSonido);
+  };
+
+  window.addEventListener('click', habilitarSonido);
+
+  // 🔄 Lógica para cargar y comparar datos
   const cargarSiNoBloqueado = async () => {
     if (!bloquearRefresco) {
-      const { nuevosTickets, nuevosToners } = await cargarDatos(); // ⬅️ ya tienes esta función
+      const { nuevosTickets, nuevosToners } = await cargarDatos();
 
-      // Solo compara si ya había datos antes
       if (ticketsPrevios.length && nuevosTickets.length > ticketsPrevios.length) {
         reproducirSonido();
       }
@@ -127,12 +147,15 @@ useEffect(() => {
     }
   };
 
-  cargarSiNoBloqueado(); // primera vez
+  cargarSiNoBloqueado(); // Primera carga
   const intervalo = setInterval(() => {
-    cargarSiNoBloqueado(); // refresco regular
+    cargarSiNoBloqueado();
   }, 3000);
 
-  return () => clearInterval(intervalo);
+  return () => {
+    clearInterval(intervalo);
+    window.removeEventListener('click', habilitarSonido);
+  };
 }, [bloquearRefresco]);
 
 const handleCancelar = (ticketId, tipo) => {
