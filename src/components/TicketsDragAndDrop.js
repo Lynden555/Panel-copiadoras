@@ -277,6 +277,8 @@ const getCardColor = (tipo, estado) => {
       boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
     }}
   >
+    
+    
     <div style={{ display: 'flex', gap: '20px' }}>
       <button
         onClick={() => handleChangeTab(null, 'Pendiente')}
@@ -296,7 +298,26 @@ const getCardColor = (tipo, estado) => {
         }}
       >
         Pendientes
-      </button>
+        </button>
+
+    <button
+    onClick={() => handleChangeTab(null, 'Reagendado')}
+    style={{
+      background: estadoFiltro === 'Reagendado' ? '#ffffff' : 'transparent',
+      color: estadoFiltro === 'Reagendado' ? '#4e4e4e' : '#292929',
+      border: 'none',
+      borderRadius: '20px',
+      padding: '10px 20px',
+      cursor: 'pointer',
+      fontWeight: 500,
+      fontSize: '16px',
+      fontFamily: 'Inter, sans-serif',
+      letterSpacing: '0.3px'
+    }}
+  >
+    Reagendados
+  </button>
+      
       <button
         onClick={() => handleChangeTab(null, 'Terminado')}
         style={{
@@ -314,6 +335,7 @@ const getCardColor = (tipo, estado) => {
       >
         Terminados
       </button>
+      
       <button
         onClick={() => handleChangeTab(null, 'Cancelado')}
         style={{
