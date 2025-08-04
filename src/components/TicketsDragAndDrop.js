@@ -11,6 +11,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UndoIcon from '@mui/icons-material/Undo';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import UserMenu from './UserMenu'; 
 import { Howl } from 'howler';
 
@@ -169,6 +170,17 @@ const handleCancelar = (ticketId, tipo) => {
     .catch(error => console.error('Error al cancelar elemento:', error));
 };
 
+const handleReagendar = (ticketId, tipo) => {
+  const confirmado = window.confirm('¿Estás seguro de Reagendar?');
+  if (!confirmado) return;
+  fetch(`https://copias-backend-production.up.railway.app/${tipo === 'toner' ? 'toners' : 'tickets'}/${ticketId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ estado: 'Reagendado' }),
+  }).then(() => cargarDatos())
+    .catch(error => console.error('Error al terminar elemento:', error));
+};
+
 const handleTerminar = (ticketId, tipo) => {
   const confirmado = window.confirm('¿Estás seguro de marcar este elemento como TERMINADO?');
   if (!confirmado) return;
@@ -252,7 +264,8 @@ const ticketsFiltrados = tickets
 
 const getCardColor = (tipo, estado) => {
   if (tipo === 'toner') return '#f3e5f5';              
-  if (estado === 'Terminado') return '#e8f5e9';        
+  if (estado === 'Terminado') return '#e8f5e9'; 
+  if (estado === 'Reagendado') return '#f4b6e8ff';        
   if (estado === 'Cancelado') return '#fff3e0';        
   return '#e3f2fd';                                     
 };
@@ -497,7 +510,25 @@ const getCardColor = (tipo, estado) => {
     </Tooltip>
   </>
 )}
-  {estadoFiltro !== 'Terminado' && estadoFiltro !== 'Cancelado' && (
+
+{estadoFiltro === 'Reagendado' && (
+  <>
+
+      <Tooltip title="Revertir">
+      <IconButton onClick={(e) => { e.stopPropagation(); handleRevertir(ticket._id, ticket.tipo); }}>
+        <UndoIcon />
+      </IconButton>
+    </Tooltip>
+    <Tooltip title="Ver Detalle ⚡️">
+      <IconButton onClick={(e) => { e.stopPropagation();setTicketSeleccionado({ _id: ticket._id, tipo: ticket.tipo }); }}>
+        <span style={{ fontSize: '20px' }}>⚡️</span>
+      </IconButton>
+    </Tooltip>
+  </>
+)}
+
+
+  {estadoFiltro !== 'Terminado' && estadoFiltro !== 'Cancelado' && estadoFiltro !== 'Reagendado' && (
     <>
       <Tooltip title="Terminar">
         <IconButton onClick={(e) => { e.stopPropagation(); handleTerminar(ticket._id, ticket.tipo); }}>
@@ -511,6 +542,13 @@ const getCardColor = (tipo, estado) => {
         </IconButton>
       </Tooltip>
 
+        <Tooltip title="Reagendar">
+        <IconButton onClick={(e) => { e.stopPropagation(); handleReagendar(ticket._id, ticket.tipo); }}>
+          <EventRepeatIcon />
+        </IconButton>
+      </Tooltip>
+
+      
       <Tooltip title="Cancelar">
         <IconButton onClick={(e) => { e.stopPropagation(); handleCancelar(ticket._id, ticket.tipo); }}>
           <DeleteIcon />
@@ -641,13 +679,20 @@ const getCardColor = (tipo, estado) => {
     </>
   )}
 
-  {estadoFiltro !== 'Cancelado' && estadoFiltro !== 'Terminado' && (
+  {estadoFiltro !== 'Cancelado' && estadoFiltro !== 'Terminado' && estadoFiltro !== 'Reagendado' && (
     <>
       <Tooltip title="Terminar">
         <IconButton onClick={(e) => { e.stopPropagation(); handleTerminar(ticket._id, ticket.tipo); }}>
           <CheckIcon />
         </IconButton>
       </Tooltip>
+
+      <Tooltip title="Reagendar">
+        <IconButton onClick={(e) => { e.stopPropagation(); handleReagendar(ticket._id, ticket.tipo); }}>
+          <EventRepeatIcon />
+        </IconButton>
+      </Tooltip>
+
       <Tooltip title="Cancelar">
         <IconButton onClick={(e) => { e.stopPropagation(); handleCancelar(ticket._id, ticket.tipo); }}>
           <DeleteIcon />
