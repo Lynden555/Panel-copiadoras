@@ -18,7 +18,7 @@ const AppTecnico = () => {
       </div>
 
       <a 
-        href="/GrapeTecnico.apk" // 👈 Reemplaza con tu ruta final tipo "/GrapeTecnico.apk"
+        href="/Tecnicos-Grape.apk" // 👈 Reemplaza con tu ruta final tipo "/GrapeTecnico.apk"
         download 
         className="boton-descarga"
       >
