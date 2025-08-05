@@ -19,7 +19,7 @@ const AppCliente = () => {
       </div>
 
       <a 
-        href="/ClienteGrapes.apk" 
+        href="/GrapeCli.apk" 
         download 
         className="boton-descarga"
       >
