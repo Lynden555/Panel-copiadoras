@@ -23,7 +23,7 @@ const AppCliente = () => {
 
       {/* BOTÓN DE DESCARGA */}
       <a href="/CliGrape.apk" download className="app-install-button">
-        📥 Instalar
+        Instalar
       </a>
 
       {/* GALERÍA DE CAPTURAS */}
