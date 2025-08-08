@@ -22,7 +22,7 @@ const AppTecnico = () => {
       </div>
 
       {/* BOTÓN DE DESCARGA */}
-      <a href="/TecnicGrape.apk" download className="app-install-button">
+      <a href="/TecnicoGrape.apk" download className="app-install-button">
         Instalar
       </a>
 

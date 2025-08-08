@@ -7,6 +7,10 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
+import StarIcon from '@mui/icons-material/Star';
+import StarHalfIcon from '@mui/icons-material/StarHalf';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import StarIcon from '@mui/icons-material/Star';
@@ -223,22 +227,46 @@ const handleRevertir = (ticketId, tipo) => {
     .catch(error => console.error('Error al eliminar elemento:', error));
 };
 
+// ✅ Calcula stats desde el array calificaciones[] del técnico (Mongo)
 const handleOpenTecnicoStats = (tecnico) => {
+  const califs = Array.isArray(tecnico?.calificaciones) ? tecnico.calificaciones : [];
+
+  const cantidadCalificaciones = califs.length;
+  const totalEstrellas = califs.reduce(
+    (sum, c) => sum + (Number(c?.estrellas) || 0),
+    0
+  );
+  const promedioEstrellas =
+    cantidadCalificaciones > 0 ? totalEstrellas / cantidadCalificaciones : 0;
+
+  // “Gamificación”: cada 10 estrellas = 1 nivel, progreso = % al siguiente nivel
+  const nivel = Math.floor(totalEstrellas / 10) + 1;
+  const progreso = Math.min((totalEstrellas % 10) * 10, 99);
+
   setTecnicoStats({
     ...tecnico,
-    nivel: Math.floor((tecnico.calificaciones?.totalEstrellas || 0) / 10) + 1,
-    progreso: ((tecnico.calificaciones?.totalEstrellas || 0) % 10) * 10
+    calificaciones: {
+      cantidadCalificaciones,
+      totalEstrellas,
+      promedioEstrellas,
+      lista: califs, // por si luego quieres mostrar el historial
+    },
+    nivel,
+    progreso,
   });
   setTecnicoModalOpen(true);
 };
 
+// ✅ Pinta estrellas sólidas según un número entero (tu modal ya manda Math.round)
 const renderStars = (count, total = 5) => {
+  const filled = Math.max(0, Math.min(total, Math.floor(Number(count) || 0)));
   const stars = [];
+
   for (let i = 1; i <= total; i++) {
     stars.push(
-      i <= count ? 
-        <StarIcon key={i} style={{ color: '#FFD700', fontSize: '2rem' }} /> : 
-        <StarBorderIcon key={i} style={{ color: '#ccc', fontSize: '2rem' }} />
+      i <= filled
+        ? <StarIcon key={i} style={{ color: '#FFD700', fontSize: '2rem' }} />
+        : <StarBorderIcon key={i} style={{ color: '#ccc', fontSize: '2rem' }} />
     );
   }
   return <div style={{ display: 'flex' }}>{stars}</div>;
@@ -317,6 +345,8 @@ const modalStyle = {
   textAlign: 'center',
 };
 ///////////////////////////
+  
+  
   return (
 <div style={{ margin: 0, padding: 0 }}>
   {/* 🚀 Cabecera visual */}
