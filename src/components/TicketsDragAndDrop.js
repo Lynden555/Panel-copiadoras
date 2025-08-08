@@ -232,27 +232,17 @@ const handleOpenTecnicoStats = (tecnico) => {
   setTecnicoModalOpen(true);
 };
 
-// Función corregida
-const renderStars = (count = 0, total = 5) => {
+const renderStars = (count, total = 5) => {
   const stars = [];
-  // Asegurar que count sea un número válido
-  const starCount = isNaN(count) ? 0 : Math.min(Math.max(Math.round(count), 0), total);
-  
   for (let i = 1; i <= total; i++) {
     stars.push(
-      i <= starCount ? 
+      i <= count ? 
         <StarIcon key={i} style={{ color: '#FFD700', fontSize: '2rem' }} /> : 
         <StarBorderIcon key={i} style={{ color: '#ccc', fontSize: '2rem' }} />
     );
   }
-  return <div style={{ display: 'flex', justifyContent: 'center' }}>{stars}</div>;
+  return <div style={{ display: 'flex' }}>{stars}</div>;
 };
-
-// En el modal, usa:
-{renderStars(
-  tecnicoStats.calificaciones?.promedioEstrellas ?? 0, 
-  5
-)}
 
 const onDragEnd = (result) => {
   const { destination, source, draggableId } = result;
