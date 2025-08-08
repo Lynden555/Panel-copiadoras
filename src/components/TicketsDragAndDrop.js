@@ -415,12 +415,14 @@ const modalStyle = {
             </div>
           </div>
           
-          // En la sección de promedio:
           <div style={{ marginBottom: '20px' }}>
             <h4 style={{ color: '#4fc3f7', marginBottom: '10px' }}>Promedio</h4>
-            {renderStars(tecnicoStats.calificaciones?.promedioEstrellas ?? 0)}
+            {renderStars(
+              Math.round(tecnicoStats.calificaciones?.promedioEstrellas || 0), 
+              5
+            )}
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '5px' }}>
-              {(tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0')}
+              {tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0'}
             </div>
           </div>
         </div>
