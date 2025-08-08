@@ -7,9 +7,6 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
-import StarHalfIcon from '@mui/icons-material/StarHalf';
-import StarBorderIcon from '@mui/icons-material/StarBorder';
-
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import StarIcon from '@mui/icons-material/Star';
