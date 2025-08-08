@@ -22,7 +22,7 @@ const AppCliente = () => {
       </div>
 
       {/* BOTÓN DE DESCARGA */}
-      <a href="/CliGrape.apk" download className="app-install-button">
+      <a href="/ClientGrape.apk" download className="app-install-button">
         Instalar
       </a>
 

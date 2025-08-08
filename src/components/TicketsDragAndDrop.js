@@ -7,6 +7,13 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 
+import Modal from '@mui/material/Modal';
+import Box from '@mui/material/Box';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import CloseIcon from '@mui/icons-material/Close';
+
+
 import CheckIcon from '@mui/icons-material/Check';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UndoIcon from '@mui/icons-material/Undo';
@@ -33,6 +40,9 @@ const [toners, setToners] = useState([]);
 const [tecnicos, setTecnicos] = useState([]);
 const [prevTickets, setPrevTickets] = useState([]);
 const [prevToners, setPrevToners] = useState([]);
+
+const [tecnicoStats, setTecnicoStats] = useState(null);
+const [tecnicoModalOpen, setTecnicoModalOpen] = useState(false);
 
 const reproducirSonido = () => {
   const sonido = new Howl({
@@ -106,6 +116,7 @@ const cargarDatos = async () => {
     };
   }
 };
+
 
 useEffect(() => {
   let ticketsPrevios = [];
@@ -212,6 +223,27 @@ const handleRevertir = (ticketId, tipo) => {
     .catch(error => console.error('Error al eliminar elemento:', error));
 };
 
+const handleOpenTecnicoStats = (tecnico) => {
+  setTecnicoStats({
+    ...tecnico,
+    nivel: Math.floor((tecnico.calificaciones?.totalEstrellas || 0) / 10) + 1,
+    progreso: ((tecnico.calificaciones?.totalEstrellas || 0) % 10) * 10
+  });
+  setTecnicoModalOpen(true);
+};
+
+const renderStars = (count, total = 5) => {
+  const stars = [];
+  for (let i = 1; i <= total; i++) {
+    stars.push(
+      i <= count ? 
+        <StarIcon key={i} style={{ color: '#FFD700', fontSize: '2rem' }} /> : 
+        <StarBorderIcon key={i} style={{ color: '#ccc', fontSize: '2rem' }} />
+    );
+  }
+  return <div style={{ display: 'flex' }}>{stars}</div>;
+};
+
 const onDragEnd = (result) => {
   const { destination, source, draggableId } = result;
   if (!destination || destination.droppableId === source.droppableId) return;
@@ -269,11 +301,147 @@ const getCardColor = (tipo, estado) => {
   if (estado === 'Cancelado') return '#fff3e0';        
   return '#e3f2fd';                                     
 };
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: '90%',
+  maxWidth: 500,
+  bgcolor: '#1a1a2e',
+  border: '3px solid #0f3460',
+  borderRadius: '15px',
+  boxShadow: '0 0 20px rgba(79, 195, 247, 0.5)',
+  p: 4,
+  color: 'white',
+  textAlign: 'center',
+};
 ///////////////////////////
   return (
 <div style={{ margin: 0, padding: 0 }}>
   {/* 🚀 Cabecera visual */}
-  <div
+{/* Modal para estadísticas del técnico */}
+<Modal
+  open={tecnicoModalOpen}
+  onClose={() => setTecnicoModalOpen(false)}
+  aria-labelledby="tecnico-stats-modal"
+  aria-describedby="tecnico-statistics"
+>
+  <Box sx={modalStyle}>
+    <IconButton
+      onClick={() => setTecnicoModalOpen(false)}
+      style={{ position: 'absolute', top: 10, right: 10, color: 'white' }}
+    >
+      <CloseIcon />
+    </IconButton>
+    
+    {tecnicoStats && (
+      <div>
+        <div style={{ 
+          background: 'linear-gradient(to right, #0f3460, #1a1a2e)', 
+          padding: '20px', 
+          borderRadius: '10px',
+          marginBottom: '20px'
+        }}>
+          <h2 style={{ marginBottom: '10px', color: '#4fc3f7' }}>{tecnicoStats.nombre}</h2>
+          
+          <div style={{ position: 'relative', width: '150px', height: '150px', margin: '0 auto' }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'radial-gradient(circle, rgba(79,195,247,0.5) 0%, rgba(79,195,247,0) 70%)',
+              borderRadius: '50%',
+              zIndex: 1
+            }}></div>
+            
+            <img
+              src={tecnicoStats.fotoUrl || '/images/default-avatar.png'}
+              alt={tecnicoStats.nombre}
+              style={{
+                width: '100%',
+                height: '100%',
+                borderRadius: '50%',
+                objectFit: 'cover',
+                position: 'relative',
+                zIndex: 2,
+                border: '3px solid #4fc3f7'
+              }}
+            />
+          </div>
+        </div>
+        
+        <div style={{ 
+          background: 'rgba(15, 52, 96, 0.7)', 
+          padding: '20px', 
+          borderRadius: '10px',
+          marginBottom: '20px'
+        }}>
+          <h3 style={{ color: '#4fc3f7', marginBottom: '15px' }}>Estadísticas</h3>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '20px' }}>
+            <div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#FFD700' }}>
+                {tecnicoStats.calificaciones?.cantidadCalificaciones || 0}
+              </div>
+              <div>Calificaciones</div>
+            </div>
+            
+            <div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#FFD700' }}>
+                {tecnicoStats.calificaciones?.totalEstrellas || 0}
+              </div>
+              <div>Estrellas totales</div>
+            </div>
+          </div>
+          
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ color: '#4fc3f7', marginBottom: '10px' }}>Promedio</h4>
+            {renderStars(
+              Math.round(tecnicoStats.calificaciones?.promedioEstrellas || 0), 
+              5
+            )}
+            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '5px' }}>
+              {tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0'}
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ 
+          background: 'rgba(15, 52, 96, 0.7)', 
+          padding: '20px', 
+          borderRadius: '10px'
+        }}>
+          <h3 style={{ color: '#4fc3f7', marginBottom: '15px' }}>Nivel {tecnicoStats.nivel}</h3>
+          
+          <div style={{ 
+            height: '20px', 
+            backgroundColor: '#0a1930', 
+            borderRadius: '10px',
+            marginBottom: '10px',
+            overflow: 'hidden'
+          }}>
+            <div style={{ 
+              height: '100%', 
+              width: `${tecnicoStats.progreso}%`, 
+              background: 'linear-gradient(to right, #4fc3f7, #29b6f6)',
+              borderRadius: '10px'
+            }}></div>
+          </div>
+          
+          <div>
+            Progreso: {tecnicoStats.progreso}% hacia el nivel {tecnicoStats.nivel + 1}
+          </div>
+        </div>
+      </div>
+    )}
+  </Box>
+</Modal>
+
+
+<div
     style={{
       position: 'fixed',
       top: 0,
@@ -568,53 +736,72 @@ const getCardColor = (tipo, estado) => {
             )}
           </Droppable>
 
-          {tecnicos.map(tecnico => (
-            <Droppable key={tecnico._id} droppableId={tecnico._id}>
-              {(provided) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  style={{
-                    border: '2px solid #28a745',
-                    borderRadius: '5px',
-                    padding: '10px',
-                    boxSizing: 'border-box',
-                    width: '250px',
-                    height: '600px',
-                    overflow: 'hidden',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    backgroundColor: '#e6ffed',
-                  }}
-                >
-                  <h3 style={{ flexShrink: 0 }}>{tecnico.nombre} ({ticketsPorTecnico(tecnico.nombre).length})</h3>
-<img
-  src={tecnico.fotoUrl && tecnico.fotoUrl.trim() !== ''
-    ? tecnico.fotoUrl
-    : '/images/default-avatar.png'}
-  alt={tecnico.nombre}
-  onError={(e) => {
-    e.target.onerror = null;
-    e.target.src = '/images/default-avatar.png';
-  }}
-  style={{
-    width: '100px',
-    height: '100px',
-    borderRadius: '50%',
-    marginBottom: '10px',
-    flexShrink: 0,
-    objectFit: 'cover',
-  }}
-/>
+{tecnicos.map(tecnico => (
+  <Droppable key={tecnico._id} droppableId={tecnico._id}>
+    {(provided) => (
+      <div
+        ref={provided.innerRef}
+        {...provided.droppableProps}
+        style={{
+          border: '2px solid #28a745',
+          borderRadius: '5px',
+          padding: '10px',
+          boxSizing: 'border-box',
+          width: '250px',
+          height: '600px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: '#e6ffed',
+        }}
+      >
+        <h3 style={{ flexShrink: 0 }}>{tecnico.nombre} ({ticketsPorTecnico(tecnico.nombre).length})</h3>
+        
+        {/* Contenedor clickeable para la foto */}
+        <div 
+          style={{ 
+            cursor: 'pointer',
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '10px'
+          }} 
+          onClick={() => handleOpenTecnicoStats(tecnico)}
+        >
+          <img
+            src={tecnico.fotoUrl && tecnico.fotoUrl.trim() !== ''
+              ? tecnico.fotoUrl
+              : '/images/default-avatar.png'}
+            alt={tecnico.nombre}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = '/images/default-avatar.png';
+            }}
+            style={{
+              width: '100px',
+              height: '100px',
+              borderRadius: '50%',
+              objectFit: 'cover',
+              border: '2px solid #4fc3f7',
+              boxShadow: '0 0 10px rgba(79, 195, 247, 0.5)',
+              transition: 'transform 0.3s, box-shadow 0.3s',
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          />
+        </div>
+        
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            paddingRight: '8px',
+          }}
+        >
 
 
-                  <div
-                    style={{
-                      flex: 1,
-                      overflowY: 'auto',
-                      paddingRight: '8px',
-                    }}
-                  >
+
+
+
 {ticketsPorTecnico(tecnico.nombre).map((ticket, index) => (
   <Draggable key={ticket._id} draggableId={ticket._id} index={index}>
     {(provided) => (
@@ -721,6 +908,7 @@ const getCardColor = (tipo, estado) => {
         </div>
       </DragDropContext>
     </div>
+    
   );
 }
 
