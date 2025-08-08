@@ -223,23 +223,15 @@ const handleRevertir = (ticketId, tipo) => {
     .catch(error => console.error('Error al eliminar elemento:', error));
 };
 
-// En handleOpenTecnicoStats:
 const handleOpenTecnicoStats = (tecnico) => {
-  const calificaciones = tecnico.calificaciones || {};
-  const totalEstrellas = calificaciones.totalEstrellas || 0;
-  
   setTecnicoStats({
     ...tecnico,
-    nivel: Math.floor(totalEstrellas / 10) + 1,
-    progreso: (totalEstrellas % 10) * 10,
-    calificaciones: {
-      cantidadCalificaciones: calificaciones.cantidadCalificaciones || 0,
-      totalEstrellas: totalEstrellas,
-      promedioEstrellas: calificaciones.promedioEstrellas || 0,
-    }
+    nivel: Math.floor((tecnico.calificaciones?.totalEstrellas || 0) / 10) + 1,
+    progreso: ((tecnico.calificaciones?.totalEstrellas || 0) % 10) * 10
   });
   setTecnicoModalOpen(true);
 };
+
 // Función corregida
 const renderStars = (count = 0, total = 5) => {
   const stars = [];
