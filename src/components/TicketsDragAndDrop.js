@@ -786,11 +786,12 @@ const modalStyle = {
           flexShrink: 0,
           textAlign: 'center',      // 📌 Centrar texto
           fontSize: '1.4rem',        // 📌 Aumentar tamaño (puedes subir a 1.6rem o más)
-          fontWeight: 'bold',        // 📌 Negritas
+          fontWeight: 'bold',        
           marginBottom: '10px',      // 📌 Espacio bajo el nombre
-          color: '#333'              // 📌 Color (puedes cambiarlo)
+          color: '#333'              
         }}
       >
+
         {tecnico.nombre} ({ticketsPorTecnico(tecnico.nombre).length})
       </h3>
         
