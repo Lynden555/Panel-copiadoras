@@ -223,26 +223,44 @@ const handleRevertir = (ticketId, tipo) => {
     .catch(error => console.error('Error al eliminar elemento:', error));
 };
 
+// En handleOpenTecnicoStats:
 const handleOpenTecnicoStats = (tecnico) => {
+  const calificaciones = tecnico.calificaciones || {};
+  const totalEstrellas = calificaciones.totalEstrellas || 0;
+  
   setTecnicoStats({
     ...tecnico,
-    nivel: Math.floor((tecnico.calificaciones?.totalEstrellas || 0) / 10) + 1,
-    progreso: ((tecnico.calificaciones?.totalEstrellas || 0) % 10) * 10
+    nivel: Math.floor(totalEstrellas / 10) + 1,
+    progreso: (totalEstrellas % 10) * 10,
+    calificaciones: {
+      cantidadCalificaciones: calificaciones.cantidadCalificaciones || 0,
+      totalEstrellas: totalEstrellas,
+      promedioEstrellas: calificaciones.promedioEstrellas || 0,
+    }
   });
   setTecnicoModalOpen(true);
 };
-
-const renderStars = (count, total = 5) => {
+// Función corregida
+const renderStars = (count = 0, total = 5) => {
   const stars = [];
+  // Asegurar que count sea un número válido
+  const starCount = isNaN(count) ? 0 : Math.min(Math.max(Math.round(count), 0), total);
+  
   for (let i = 1; i <= total; i++) {
     stars.push(
-      i <= count ? 
+      i <= starCount ? 
         <StarIcon key={i} style={{ color: '#FFD700', fontSize: '2rem' }} /> : 
         <StarBorderIcon key={i} style={{ color: '#ccc', fontSize: '2rem' }} />
     );
   }
-  return <div style={{ display: 'flex' }}>{stars}</div>;
+  return <div style={{ display: 'flex', justifyContent: 'center' }}>{stars}</div>;
 };
+
+// En el modal, usa:
+{renderStars(
+  tecnicoStats.calificaciones?.promedioEstrellas ?? 0, 
+  5
+)}
 
 const onDragEnd = (result) => {
   const { destination, source, draggableId } = result;
@@ -397,14 +415,12 @@ const modalStyle = {
             </div>
           </div>
           
+          // En la sección de promedio:
           <div style={{ marginBottom: '20px' }}>
             <h4 style={{ color: '#4fc3f7', marginBottom: '10px' }}>Promedio</h4>
-            {renderStars(
-              Math.round(tecnicoStats.calificaciones?.promedioEstrellas || 0), 
-              5
-            )}
+            {renderStars(tecnicoStats.calificaciones?.promedioEstrellas ?? 0)}
             <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '5px' }}>
-              {tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0'}
+              {(tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0')}
             </div>
           </div>
         </div>
