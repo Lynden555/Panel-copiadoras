@@ -781,7 +781,18 @@ const modalStyle = {
           backgroundColor: '#e6ffed',
         }}
       >
-        <h3 style={{ flexShrink: 0 }}>{tecnico.nombre} ({ticketsPorTecnico(tecnico.nombre).length})</h3>
+              <h3
+        style={{
+          flexShrink: 0,
+          textAlign: 'center',      // 📌 Centrar texto
+          fontSize: '1.4rem',        // 📌 Aumentar tamaño (puedes subir a 1.6rem o más)
+          fontWeight: 'bold',        // 📌 Negritas
+          marginBottom: '10px',      // 📌 Espacio bajo el nombre
+          color: '#333'              // 📌 Color (puedes cambiarlo)
+        }}
+      >
+        {tecnico.nombre} ({ticketsPorTecnico(tecnico.nombre).length})
+      </h3>
         
         {/* Contenedor clickeable para la foto */}
         <div 
