@@ -51,18 +51,56 @@ function getRangesMX(now = new Date()) {
 // 📊 Cuenta por estado dentro de un rango
 function countByStatus(tickets, tecnicoIdOrNombre, start, end) {
   const inRange = (d) => {
+    if (!d) return false;
     const t = (d instanceof Date) ? d : new Date(d);
     return t >= start && t <= end;
   };
 
+  // 🟦 ASIGNADOS: contar por snapshot (fechaPrimerAsignado + técnico de primer asignado)
   const asignados = tickets.filter(t =>
-    (t.tecnicoId === tecnicoIdOrNombre || t.tecnicoAsignado === tecnicoIdOrNombre || t.tecnicoNombre === tecnicoIdOrNombre) &&
-    inRange(t.fechaAsignacion || t.fechaCreacion || t.createdAt)
+    inRange(t.fechaPrimerAsignado) &&
+    (
+      t.tecnicoPrimerAsignadoId === tecnicoIdOrNombre ||
+      t.tecnicoPrimerAsignadoNombre === tecnicoIdOrNombre ||
+      // fallback por si hay docs viejos sin snapshot
+      t.tecnicoId === tecnicoIdOrNombre ||
+      t.tecnicoAsignado === tecnicoIdOrNombre ||
+      t.tecnicoNombre === tecnicoIdOrNombre
+    )
   );
 
-  const finalizados = asignados.filter(t => t.estado === 'Terminado' && inRange(t.fechaFinalizacion || t.updatedAt));
-  const reagendados = asignados.filter(t => t.estado === 'Reagendado' && inRange(t.updatedAt || t.fechaReagendo));
-  const cancelados  = asignados.filter(t => t.estado === 'Cancelado'  && inRange(t.updatedAt || t.fechaCancelacion));
+  // 🟩 TERMINADOS:
+  const finalizados = tickets.filter(t =>
+    inRange(t.fechaFinalizacion) &&
+    (
+      t.tecnicoId === tecnicoIdOrNombre ||
+      t.tecnicoAsignado === tecnicoIdOrNombre ||
+      t.tecnicoNombre === tecnicoIdOrNombre
+    )
+  );
+
+  // 🟨 REAGENDADOS:
+  const reagendados = tickets.filter(t =>
+    inRange(t.fechaReagendo) &&
+    (
+      t.tecnicoReagendoId === tecnicoIdOrNombre ||
+      t.tecnicoReagendoNombre === tecnicoIdOrNombre ||
+      // fallback
+      t.tecnicoId === tecnicoIdOrNombre ||
+      t.tecnicoAsignado === tecnicoIdOrNombre ||
+      t.tecnicoNombre === tecnicoIdOrNombre
+    )
+  );
+
+  // 🟥 CANCELADOS:
+  const cancelados = tickets.filter(t =>
+    inRange(t.fechaCancelacion) &&
+    (
+      t.tecnicoId === tecnicoIdOrNombre ||
+      t.tecnicoAsignado === tecnicoIdOrNombre ||
+      t.tecnicoNombre === tecnicoIdOrNombre
+    )
+  );
 
   return {
     asignados: asignados.length,
@@ -103,6 +141,9 @@ const [toners, setToners] = useState([]);
 const [tecnicos, setTecnicos] = useState([]);
 const [prevTickets, setPrevTickets] = useState([]);
 const [prevToners, setPrevToners] = useState([]);
+const [openDay, setOpenDay] = useState(true);
+const [openWeek, setOpenWeek] = useState(false);
+const [openMonth, setOpenMonth] = useState(false);
 
 const [tecnicoStats, setTecnicoStats] = useState(null);
 const [tecnicoModalOpen, setTecnicoModalOpen] = useState(false);
@@ -614,105 +655,208 @@ useEffect(() => {
           </>
         )}
 
-        {/* ======= TAB: STATS TÉCNICO ======= */}
-        {tab === 'stats' && (
-          <div style={{ 
-            background: 'rgba(15, 52, 96, 0.7)', 
-            padding: '20px', 
-            borderRadius: '10px',
-            marginBottom: '20px',
-            color: '#ddd'
-          }}>
-            <h3 style={{ color: '#4fc3f7', marginBottom: 15 }}>Actividad</h3>
+       {tab === 'stats' && (
+  <div style={{ 
+    background: 'rgba(15, 52, 96, 0.7)', 
+    padding: '20px', 
+    borderRadius: '10px',
+    marginBottom: '20px',
+    color: '#ddd'
+  }}>
+    <h3 style={{ color: '#4fc3f7', marginBottom: 15 }}>Actividad</h3>
 
-            {/* --- HOY --- */}
-            <div style={{ marginBottom: 18 }}>
-              <h4 style={{ color: '#4fc3f7', marginBottom: 8 }}>Hoy</h4>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Asignados: {tecnicoStats?.stats?.day?.asignados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Finalizados: {tecnicoStats?.stats?.day?.finalizados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Reagendados: {tecnicoStats?.stats?.day?.reagendados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Cancelados: {tecnicoStats?.stats?.day?.cancelados ?? 0}
-                </span>
+    {/* === HOY (colapsable) === */}
+    <div style={{ marginBottom: 12 }}>
+      <button
+        onClick={() => setOpenDay(v => !v)}
+        style={{
+          width: '100%',
+          background: 'linear-gradient(to right, #0f3460, #1a1a2e)',
+          color: '#4fc3f7',
+          border: '1px solid #4fc3f7',
+          borderRadius: 10,
+          padding: '10px 12px',
+          textAlign: 'left',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        {openDay ? '▾' : '▸'} Actividad de Hoy
+      </button>
+
+      {openDay && (
+        <div style={{ padding: '14px 6px 6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 10 }}>
+            {/* Asignados */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.day?.asignados ?? 0}
               </div>
-              <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${tecnicoStats?.stats?.day?.eficiencia ?? 0}%`,
-                  height: '100%',
-                  background: colorEficiencia(tecnicoStats?.stats?.day?.eficiencia ?? 0)
-                }} />
-              </div>
-              <div style={{ marginTop: 6, color: '#ddd' }}>
-                Eficiencia: <b>{tecnicoStats?.stats?.day?.eficiencia ?? 0}%</b>
-              </div>
+              <div>Asignados</div>
             </div>
-
-            {/* --- SEMANA (Lun–Sáb corte 14:00) --- */}
-            <div style={{ marginBottom: 18 }}>
-              <h4 style={{ color: '#4fc3f7', marginBottom: 8 }}>Semana (Lun–Sáb, corte 14:00)</h4>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Asignados: {tecnicoStats?.stats?.week?.asignados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Finalizados: {tecnicoStats?.stats?.week?.finalizados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Reagendados: {tecnicoStats?.stats?.week?.reagendados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Cancelados: {tecnicoStats?.stats?.week?.cancelados ?? 0}
-                </span>
+            {/* Finalizados */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.day?.finalizados ?? 0}
               </div>
-              <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${tecnicoStats?.stats?.week?.eficiencia ?? 0}%`,
-                  height: '100%',
-                  background: colorEficiencia(tecnicoStats?.stats?.week?.eficiencia ?? 0)
-                }} />
-              </div>
-              <div style={{ marginTop: 6, color: '#ddd' }}>
-                Eficiencia: <b>{tecnicoStats?.stats?.week?.eficiencia ?? 0}%</b>
-              </div>
+              <div>Finalizados</div>
             </div>
-
-            {/* --- MES --- */}
-            <div>
-              <h4 style={{ color: '#4fc3f7', marginBottom: 8 }}>Mes</h4>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Asignados: {tecnicoStats?.stats?.month?.asignados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Finalizados: {tecnicoStats?.stats?.month?.finalizados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Reagendados: {tecnicoStats?.stats?.month?.reagendados ?? 0}
-                </span>
-                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
-                  Cancelados: {tecnicoStats?.stats?.month?.cancelados ?? 0}
-                </span>
+            {/* Reagendados */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.day?.reagendados ?? 0}
               </div>
-              <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
-                <div style={{
-                  width: `${tecnicoStats?.stats?.month?.eficiencia ?? 0}%`,
-                  height: '100%',
-                  background: colorEficiencia(tecnicoStats?.stats?.month?.eficiencia ?? 0)
-                }} />
+              <div>Reagendados</div>
+            </div>
+            {/* Cancelados */}
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.day?.cancelados ?? 0}
               </div>
-              <div style={{ marginTop: 6, color: '#ddd' }}>
-                Eficiencia: <b>{tecnicoStats?.stats?.month?.eficiencia ?? 0}%</b>
-              </div>
+              <div>Cancelados</div>
             </div>
           </div>
-        )}
+
+          {/* Barra gamer de eficiencia */}
+          <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{
+              width: `${tecnicoStats?.stats?.day?.eficiencia ?? 0}%`,
+              height: '100%',
+              background: colorEficiencia(tecnicoStats?.stats?.day?.eficiencia ?? 0)
+            }} />
+          </div>
+          <div style={{ marginTop: 6, color: '#ddd', textAlign: 'center' }}>
+            Eficiencia: <b>{tecnicoStats?.stats?.day?.eficiencia ?? 0}%</b>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* === SEMANA (colapsable) === */}
+    <div style={{ marginBottom: 12 }}>
+      <button
+        onClick={() => setOpenWeek(v => !v)}
+        style={{
+          width: '100%',
+          background: 'linear-gradient(to right, #0f3460, #1a1a2e)',
+          color: '#4fc3f7',
+          border: '1px solid #4fc3f7',
+          borderRadius: 10,
+          padding: '10px 12px',
+          textAlign: 'left',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        {openWeek ? '▾' : '▸'} Actividad de la Semana (Lun–Sáb, corte 14:00)
+      </button>
+
+      {openWeek && (
+        <div style={{ padding: '14px 6px 6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 10 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.week?.asignados ?? 0}
+              </div>
+              <div>Asignados</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.week?.finalizados ?? 0}
+              </div>
+              <div>Finalizados</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.week?.reagendados ?? 0}
+              </div>
+              <div>Reagendados</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.week?.cancelados ?? 0}
+              </div>
+              <div>Cancelados</div>
+            </div>
+          </div>
+
+          <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{
+              width: `${tecnicoStats?.stats?.week?.eficiencia ?? 0}%`,
+              height: '100%',
+              background: colorEficiencia(tecnicoStats?.stats?.week?.eficiencia ?? 0)
+            }} />
+          </div>
+          <div style={{ marginTop: 6, color: '#ddd', textAlign: 'center' }}>
+            Eficiencia: <b>{tecnicoStats?.stats?.week?.eficiencia ?? 0}%</b>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* === MES (colapsable) === */}
+    <div>
+      <button
+        onClick={() => setOpenMonth(v => !v)}
+        style={{
+          width: '100%',
+          background: 'linear-gradient(to right, #0f3460, #1a1a2e)',
+          color: '#4fc3f7',
+          border: '1px solid #4fc3f7',
+          borderRadius: 10,
+          padding: '10px 12px',
+          textAlign: 'left',
+          cursor: 'pointer',
+          fontWeight: 'bold'
+        }}
+      >
+        {openMonth ? '▾' : '▸'} Actividad del Mes
+      </button>
+
+      {openMonth && (
+        <div style={{ padding: '14px 6px 6px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 10 }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.month?.asignados ?? 0}
+              </div>
+              <div>Asignados</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.month?.finalizados ?? 0}
+              </div>
+              <div>Finalizados</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.month?.reagendados ?? 0}
+              </div>
+              <div>Reagendados</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '2.2rem', fontWeight: 'bold', color: '#FFD700', lineHeight: 1 }}>
+                {tecnicoStats?.stats?.month?.cancelados ?? 0}
+              </div>
+              <div>Cancelados</div>
+            </div>
+          </div>
+
+          <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
+            <div style={{
+              width: `${tecnicoStats?.stats?.month?.eficiencia ?? 0}%`,
+              height: '100%',
+              background: colorEficiencia(tecnicoStats?.stats?.month?.eficiencia ?? 0)
+            }} />
+          </div>
+          <div style={{ marginTop: 6, color: '#ddd', textAlign: 'center' }}>
+            Eficiencia: <b>{tecnicoStats?.stats?.month?.eficiencia ?? 0}%</b>
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+)}
       </div>
     )}
   </Box>
