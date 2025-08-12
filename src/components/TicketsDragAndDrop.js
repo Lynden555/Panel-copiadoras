@@ -60,7 +60,7 @@ function countByStatus(tickets, tecnicoIdOrNombre, start, end) {
     inRange(t.fechaAsignacion || t.fechaCreacion || t.createdAt)
   );
 
-  const finalizados = asignados.filter(t => t.estado === 'Finalizado' && inRange(t.fechaFinalizacion || t.updatedAt));
+  const finalizados = asignados.filter(t => t.estado === 'Terminado' && inRange(t.fechaFinalizacion || t.updatedAt));
   const reagendados = asignados.filter(t => t.estado === 'Reagendado' && inRange(t.updatedAt || t.fechaReagendo));
   const cancelados  = asignados.filter(t => t.estado === 'Cancelado'  && inRange(t.updatedAt || t.fechaCancelacion));
 
