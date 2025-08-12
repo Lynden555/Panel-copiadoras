@@ -23,6 +23,69 @@ import UserMenu from './UserMenu';
 import { Howl } from 'howler';
 
 
+// 🗓️ Rango día / semana (Lun–Sáb con corte sáb 14:00) / mes
+function getRangesMX(now = new Date()) {
+  const tz = now; // asumimos ya en hora local MX
+  // Día actual
+  const dayStart = new Date(tz); dayStart.setHours(0,0,0,0);
+  const dayEnd = new Date(tz);
+
+  // Semana: Lunes 00:00 -> Sábado 14:00
+  const weekStart = new Date(tz);
+  const day = weekStart.getDay(); // 0:Dom,1:Lun,…6:Sab
+  const diffToMonday = (day === 0 ? -6 : 1 - day); // mover a Lunes
+  weekStart.setDate(weekStart.getDate() + diffToMonday);
+  weekStart.setHours(0,0,0,0);
+
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 5); // Sábado
+  weekEnd.setHours(14,0,0,0); // corte 14:00
+
+  // Mes calendario
+  const monthStart = new Date(tz.getFullYear(), tz.getMonth(), 1, 0,0,0,0);
+  const monthEnd   = new Date(tz.getFullYear(), tz.getMonth()+1, 0, 23,59,59,999);
+
+  return { dayStart, dayEnd, weekStart, weekEnd, monthStart, monthEnd };
+}
+
+// 📊 Cuenta por estado dentro de un rango
+function countByStatus(tickets, tecnicoIdOrNombre, start, end) {
+  const inRange = (d) => {
+    const t = (d instanceof Date) ? d : new Date(d);
+    return t >= start && t <= end;
+  };
+
+  const asignados = tickets.filter(t =>
+    (t.tecnicoId === tecnicoIdOrNombre || t.tecnicoAsignado === tecnicoIdOrNombre || t.tecnicoNombre === tecnicoIdOrNombre) &&
+    inRange(t.fechaAsignacion || t.fechaCreacion || t.createdAt)
+  );
+
+  const finalizados = asignados.filter(t => t.estado === 'Finalizado' && inRange(t.fechaFinalizacion || t.updatedAt));
+  const reagendados = asignados.filter(t => t.estado === 'Reagendado' && inRange(t.updatedAt || t.fechaReagendo));
+  const cancelados  = asignados.filter(t => t.estado === 'Cancelado'  && inRange(t.updatedAt || t.fechaCancelacion));
+
+  return {
+    asignados: asignados.length,
+    finalizados: finalizados.length,
+    reagendados: reagendados.length,
+    cancelados: cancelados.length,
+  };
+}
+
+// 🏁 Eficiencia: (1.0*F + 0.5*R) / Asignados
+function eficiencia({asignados, finalizados, reagendados}) {
+  if (!asignados) return 0;
+  return ((finalizados + 0.5 * reagendados) / asignados) * 100;
+}
+
+// 🎮 Color gamer según % (verde/amarillo/rojo)
+function colorEficiencia(pct) {
+  if (pct >= 80) return 'linear-gradient(to right, #00c853, #64dd17)';  // verde
+  if (pct >= 50) return 'linear-gradient(to right, #ffd600, #ffab00)';  // amarillo
+  return 'linear-gradient(to right, #ff1744, #d50000)';                  // rojo
+}
+
+
 function TicketsDragAndDrop({
   estadoFiltro,
   handleChangeTab,
@@ -43,6 +106,7 @@ const [prevToners, setPrevToners] = useState([]);
 
 const [tecnicoStats, setTecnicoStats] = useState(null);
 const [tecnicoModalOpen, setTecnicoModalOpen] = useState(false);
+const [tab, setTab] = useState('stats'); // 'stats' | 'calificaciones'
 
 const reproducirSonido = () => {
   const sonido = new Howl({
@@ -239,7 +303,31 @@ const handleOpenTecnicoStats = (tecnico) => {
   const nivel = Math.floor(totalEstrellas / 10) + 1;
   const progreso = Math.min((totalEstrellas % 10) * 10, 99);
 
-  setTecnicoStats({
+  const ranges = getRangesMX(new Date());
+
+  const idONombre = tecnico.tecnicoId || tecnico.nombre;
+  const d = countByStatus(tickets, idONombre, ranges.dayStart, ranges.dayEnd);
+  const w = countByStatus(tickets, idONombre, ranges.weekStart, ranges.weekEnd);
+  const m = countByStatus(tickets, idONombre, ranges.monthStart, ranges.monthEnd);
+
+  const dayEff   = Math.round(eficiencia(d));
+  const weekEff  = Math.round(eficiencia(w));
+  const monthEff = Math.round(eficiencia(m));
+
+  // 🔽 integra junto a tus calificaciones/nivel/progreso existentes
+  setTecnicoStats(prev => ({
+    ...tecnico,
+    ...prev,
+    stats: {
+      day:   { ...d,   eficiencia: dayEff },
+      week:  { ...w,   eficiencia: weekEff },
+      month: { ...m,   eficiencia: monthEff },
+    },
+  }));
+  setTecnicoModalOpen(true);
+  setTab('stats'); // abrir en Stats
+
+setTecnicoStats({
     ...tecnico,
     calificaciones: {
       cantidadCalificaciones,
@@ -360,9 +448,10 @@ const modalStyle = {
     >
       <CloseIcon />
     </IconButton>
-    
+
     {tecnicoStats && (
       <div>
+        {/* HEADER con nombre y foto */}
         <div style={{ 
           background: 'linear-gradient(to right, #0f3460, #1a1a2e)', 
           padding: '20px', 
@@ -398,69 +487,209 @@ const modalStyle = {
             />
           </div>
         </div>
-        
-        <div style={{ 
-          background: 'rgba(15, 52, 96, 0.7)', 
-          padding: '20px', 
-          borderRadius: '10px',
-          marginBottom: '20px'
-        }}>
-          <h3 style={{ color: '#4fc3f7', marginBottom: '15px' }}>Estadísticas</h3>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '20px' }}>
-            <div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#FFD700' }}>
-                {tecnicoStats.calificaciones?.cantidadCalificaciones || 0}
+
+        {/* TABS */}
+        <div style={{ display: 'flex', gap: 10, margin: '0 0 20px 0' }}>
+          <button
+            onClick={() => setTab('stats')}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: '1px solid #4fc3f7',
+              background: tab === 'stats' ? 'linear-gradient(to right, #0f3460, #1a1a2e)' : 'transparent',
+              color: '#4fc3f7',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Stats Técnico
+          </button>
+
+          <button
+            onClick={() => setTab('calificaciones')}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: '1px solid #4fc3f7',
+              background: tab === 'calificaciones' ? 'linear-gradient(to right, #0f3460, #1a1a2e)' : 'transparent',
+              color: '#4fc3f7',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Calificaciones
+          </button>
+        </div>
+
+        {/* ======= TAB: CALIFICACIONES (tu contenido intacto) ======= */}
+        {tab === 'calificaciones' && (
+          <>
+            <div style={{ 
+              background: 'rgba(15, 52, 96, 0.7)', 
+              padding: '20px', 
+              borderRadius: '10px',
+              marginBottom: '20px'
+            }}>
+              <h3 style={{ color: '#4fc3f7', marginBottom: '15px' }}>Estadísticas</h3>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-around', marginBottom: '20px' }}>
+                <div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#FFD700' }}>
+                    {tecnicoStats.calificaciones?.cantidadCalificaciones || 0}
+                  </div>
+                  <div>Calificaciones</div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#FFD700' }}>
+                    {tecnicoStats.calificaciones?.totalEstrellas || 0}
+                  </div>
+                  <div>Estrellas totales</div>
+                </div>
               </div>
-              <div>Calificaciones</div>
+              
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ color: '#4fc3f7', marginBottom: '10px' }}>Promedio</h4>
+                {renderStars(
+                  Math.round(tecnicoStats.calificaciones?.promedioEstrellas || 0), 
+                  5
+                )}
+                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '5px' }}>
+                  {tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0'}
+                </div>
+              </div>
             </div>
             
-            <div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: '#FFD700' }}>
-                {tecnicoStats.calificaciones?.totalEstrellas || 0}
-              </div>
-              <div>Estrellas totales</div>
-            </div>
-          </div>
-          
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ color: '#4fc3f7', marginBottom: '10px' }}>Promedio</h4>
-            {renderStars(
-              Math.round(tecnicoStats.calificaciones?.promedioEstrellas || 0), 
-              5
-            )}
-            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', marginTop: '5px' }}>
-              {tecnicoStats.calificaciones?.promedioEstrellas?.toFixed(1) || '0.0'}
-            </div>
-          </div>
-        </div>
-        
-        <div style={{ 
-          background: 'rgba(15, 52, 96, 0.7)', 
-          padding: '20px', 
-          borderRadius: '10px'
-        }}>
-          <h3 style={{ color: '#4fc3f7', marginBottom: '15px' }}>Nivel {tecnicoStats.nivel}</h3>
-          
-          <div style={{ 
-            height: '20px', 
-            backgroundColor: '#0a1930', 
-            borderRadius: '10px',
-            marginBottom: '10px',
-            overflow: 'hidden'
-          }}>
             <div style={{ 
-              height: '100%', 
-              width: `${tecnicoStats.progreso}%`, 
-              background: 'linear-gradient(to right, #4fc3f7, #29b6f6)',
+              background: 'rgba(15, 52, 96, 0.7)', 
+              padding: '20px', 
               borderRadius: '10px'
-            }}></div>
+            }}>
+              <h3 style={{ color: '#4fc3f7', marginBottom: '15px' }}>Nivel {tecnicoStats.nivel}</h3>
+              
+              <div style={{ 
+                height: '20px', 
+                backgroundColor: '#0a1930', 
+                borderRadius: '10px',
+                marginBottom: '10px',
+                overflow: 'hidden'
+              }}>
+                <div style={{ 
+                  height: '100%', 
+                  width: `${tecnicoStats.progreso}%`, 
+                  background: 'linear-gradient(to right, #4fc3f7, #29b6f6)',
+                  borderRadius: '10px'
+                }}></div>
+              </div>
+              
+              <div>
+                Progreso: {tecnicoStats.progreso}% hacia el nivel {tecnicoStats.nivel + 1}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ======= TAB: STATS TÉCNICO ======= */}
+        {tab === 'stats' && (
+          <div style={{ 
+            background: 'rgba(15, 52, 96, 0.7)', 
+            padding: '20px', 
+            borderRadius: '10px',
+            marginBottom: '20px',
+            color: '#ddd'
+          }}>
+            <h3 style={{ color: '#4fc3f7', marginBottom: 15 }}>Actividad</h3>
+
+            {/* --- HOY --- */}
+            <div style={{ marginBottom: 18 }}>
+              <h4 style={{ color: '#4fc3f7', marginBottom: 8 }}>Hoy</h4>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Asignados: {tecnicoStats?.stats?.day?.asignados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Finalizados: {tecnicoStats?.stats?.day?.finalizados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Reagendados: {tecnicoStats?.stats?.day?.reagendados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Cancelados: {tecnicoStats?.stats?.day?.cancelados ?? 0}
+                </span>
+              </div>
+              <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${tecnicoStats?.stats?.day?.eficiencia ?? 0}%`,
+                  height: '100%',
+                  background: colorEficiencia(tecnicoStats?.stats?.day?.eficiencia ?? 0)
+                }} />
+              </div>
+              <div style={{ marginTop: 6, color: '#ddd' }}>
+                Eficiencia: <b>{tecnicoStats?.stats?.day?.eficiencia ?? 0}%</b>
+              </div>
+            </div>
+
+            {/* --- SEMANA (Lun–Sáb corte 14:00) --- */}
+            <div style={{ marginBottom: 18 }}>
+              <h4 style={{ color: '#4fc3f7', marginBottom: 8 }}>Semana (Lun–Sáb, corte 14:00)</h4>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Asignados: {tecnicoStats?.stats?.week?.asignados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Finalizados: {tecnicoStats?.stats?.week?.finalizados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Reagendados: {tecnicoStats?.stats?.week?.reagendados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Cancelados: {tecnicoStats?.stats?.week?.cancelados ?? 0}
+                </span>
+              </div>
+              <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${tecnicoStats?.stats?.week?.eficiencia ?? 0}%`,
+                  height: '100%',
+                  background: colorEficiencia(tecnicoStats?.stats?.week?.eficiencia ?? 0)
+                }} />
+              </div>
+              <div style={{ marginTop: 6, color: '#ddd' }}>
+                Eficiencia: <b>{tecnicoStats?.stats?.week?.eficiencia ?? 0}%</b>
+              </div>
+            </div>
+
+            {/* --- MES --- */}
+            <div>
+              <h4 style={{ color: '#4fc3f7', marginBottom: 8 }}>Mes</h4>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Asignados: {tecnicoStats?.stats?.month?.asignados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Finalizados: {tecnicoStats?.stats?.month?.finalizados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Reagendados: {tecnicoStats?.stats?.month?.reagendados ?? 0}
+                </span>
+                <span style={{ padding: '6px 10px', border: '1px solid #4fc3f7', borderRadius: 8 }}>
+                  Cancelados: {tecnicoStats?.stats?.month?.cancelados ?? 0}
+                </span>
+              </div>
+              <div style={{ height: 16, background: '#0a1930', borderRadius: 10, overflow: 'hidden' }}>
+                <div style={{
+                  width: `${tecnicoStats?.stats?.month?.eficiencia ?? 0}%`,
+                  height: '100%',
+                  background: colorEficiencia(tecnicoStats?.stats?.month?.eficiencia ?? 0)
+                }} />
+              </div>
+              <div style={{ marginTop: 6, color: '#ddd' }}>
+                Eficiencia: <b>{tecnicoStats?.stats?.month?.eficiencia ?? 0}%</b>
+              </div>
+            </div>
           </div>
-          
-          <div>
-            Progreso: {tecnicoStats.progreso}% hacia el nivel {tecnicoStats.nivel + 1}
-          </div>
-        </div>
+        )}
       </div>
     )}
   </Box>
