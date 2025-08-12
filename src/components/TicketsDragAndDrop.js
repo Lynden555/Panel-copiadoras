@@ -369,8 +369,9 @@ const onDragEnd = (result) => {
   const nuevoEstado = destination.droppableId === 'tickets' ? 'Pendiente' : 'Asignado';
   const nuevoTecnico = destination.droppableId === 'tickets' ? null : (tecnicos.find(t => t._id === destination.droppableId)?.nombre || null);
 
+  const ahoraISO = new Date().toISOString();
   const actualizados = tickets.map(t =>
-    t._id === draggableId ? { ...t, estado: nuevoEstado, tecnicoAsignado: nuevoTecnico } : t
+    t._id === draggableId ? { ...t, estado: nuevoEstado, tecnicoAsignado: nuevoTecnico, fechaAsignacion: nuevoEstado === 'Asignado' ? ahoraISO : null } : t
   );
   setTickets(actualizados); // 👈 se ve reflejado al instante
   setBloquearRefresco(true);
@@ -379,7 +380,7 @@ const onDragEnd = (result) => {
   fetch(`https://copias-backend-production.up.railway.app/${endpoint}/${draggableId}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ estado: nuevoEstado, tecnicoAsignado: nuevoTecnico }),
+    body: JSON.stringify({ estado: nuevoEstado, tecnicoAsignado: nuevoTecnico, fechaAsignacion: nuevoEstado === 'Asignado' ? ahoraISO : null }),
   })
     .then(() => {
       setTimeout(() => setBloquearRefresco(false), 1000); // 🔓 Liberamos refresco suave
@@ -418,8 +419,8 @@ const modalStyle = {
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: '90%',
-  maxWidth: 500,
+  width: '92vw',
+  maxWidth: 520,
   bgcolor: '#1a1a2e',
   border: '3px solid #0f3460',
   borderRadius: '15px',
@@ -427,7 +428,29 @@ const modalStyle = {
   p: 4,
   color: 'white',
   textAlign: 'center',
+  maxHeight: '90vh',     
+  overflowY: 'auto'
 };
+
+useEffect(() => {
+  if (!tecnicoModalOpen || tab !== 'stats' || !tecnicoStats) return;
+  const ranges = getRangesMX(new Date());
+  const idONombre = tecnicoStats.tecnicoId || tecnicoStats.nombre;
+
+  const d = countByStatus(tickets, idONombre, ranges.dayStart, ranges.dayEnd);
+  const w = countByStatus(tickets, idONombre, ranges.weekStart, ranges.weekEnd);
+  const m = countByStatus(tickets, idONombre, ranges.monthStart, ranges.monthEnd);
+
+  setTecnicoStats(s => ({
+    ...s,
+    stats: {
+      day:   { ...d, eficiencia: Math.round(eficiencia(d)) },
+      week:  { ...w, eficiencia: Math.round(eficiencia(w)) },
+      month: { ...m, eficiencia: Math.round(eficiencia(m)) },
+    }
+  }));
+}, [tickets, tecnicoModalOpen, tab]); // 👈 se actualiza cuando hay cambios
+
 ///////////////////////////
   
   
