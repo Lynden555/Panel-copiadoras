@@ -12,13 +12,18 @@ import CloseIcon from '@mui/icons-material/Close';
 import DevicesIcon from '@mui/icons-material/Devices';
 import PrintIcon from '@mui/icons-material/Print';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
-import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
-// 🔧 Backend base
 const API_BASE = 'https://copias-backend-production.up.railway.app';
 
 export default function EmpresasPanel() {
+  // ⛔️ Gate: si no hay sesión, regresa al inicio y no renderiza
+  const empresaIdLogin = localStorage.getItem('empresaId');
+  const ciudadActual   = localStorage.getItem('ciudad');
+  if (!empresaIdLogin) {
+    window.location.href = window.location.origin;
+    return null;
+  }
+
   // izquierda
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(false);
@@ -43,10 +48,6 @@ export default function EmpresasPanel() {
 
   // confirm delete
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-
-  // scope del login (si lo usas)
-  const ciudadActual = localStorage.getItem('ciudad');
-  const empresaIdLogin = localStorage.getItem('empresaId');
 
   // ====== helpers ======
   const copy = async (txt) => {
@@ -88,142 +89,144 @@ export default function EmpresasPanel() {
   };
 
   // ====== data load ======
-const loadEmpresas = async () => {
-  setLoadingEmpresas(true);
-  try {
-    const res = await fetch(`${API_BASE}/api/empresas`);
-    const data = await res.json();
-    if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
+  const loadEmpresas = async () => {
+    setLoadingEmpresas(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/empresas`);
+      const data = await res.json();
+      if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
 
-    // 👇 NO filtramos por empresaIdLogin porque este módulo usa otra colección (Empresas ApiKey)
-    const lista = data.data || [];
-    setEmpresas(lista);
+      const lista = data.data || [];
+      setEmpresas(lista);
 
-    // 🔧 Restaurar selección previa si existe y sigue viva
-    const storedId = localStorage.getItem('selectedEmpresaId');
-    let toSelect = null;
+      // Restaurar selección previa si existe
+      const storedId = localStorage.getItem('selectedEmpresaId');
+      let toSelect = null;
 
-    if (storedId) {
-      toSelect = lista.find(e => String(e._id) === String(storedId)) || null;
-    }
-    // Si no hay almacenada pero hay una sola, autoselecciona
-    if (!toSelect && lista.length === 1) {
-      toSelect = lista[0];
-    }
+      if (storedId) {
+        toSelect = lista.find(e => String(e._id) === String(storedId)) || null;
+      }
+      if (!toSelect && lista.length === 1) {
+        toSelect = lista[0];
+      }
 
-    if (toSelect) {
-      setSelectedEmpresa(toSelect);
-      setMode('empresa');
-      setExpandedPrinterId(null);
-      await loadPrinters(toSelect._id, ciudadActual); // ciudadActual opcional (si estás usando ese query)
-    } else {
+      if (toSelect) {
+        setSelectedEmpresa(toSelect);
+        setMode('empresa');
+        setExpandedPrinterId(null);
+        await loadPrinters(toSelect._id); // 👈 ciudad se toma adentro
+      } else {
+        setSelectedEmpresa(null);
+        setMode('list');
+        setPrinters([]);
+      }
+    } catch (e) {
+      console.error(e);
+      setEmpresas([]);
       setSelectedEmpresa(null);
-      setMode('list');
       setPrinters([]);
+    } finally {
+      setLoadingEmpresas(false);
     }
-  } catch (e) {
-    console.error(e);
-    setEmpresas([]);
-    setSelectedEmpresa(null);
-    setPrinters([]);
-  } finally {
-    setLoadingEmpresas(false);
-  }
-};
+  };
 
-// Reemplaza tu loadPrinters por este
-const loadPrinters = async (empresaIdParam) => {
-  setLoadingPrinters(true);
-  try {
-    // lee ciudad “fresca” del localStorage siempre
-    const ciudadNow = localStorage.getItem('ciudad');
-    const q = ciudadNow ? `?ciudad=${encodeURIComponent(ciudadNow)}` : '';
-    const res = await fetch(`${API_BASE}/api/empresas/${empresaIdParam}/impresoras${q}`);
-    const data = await res.json();
-    if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
+  const loadPrinters = async (empresaIdParam) => {
+    setLoadingPrinters(true);
+    try {
+      const ciudadNow = localStorage.getItem('ciudad'); // 👈 ciudad fresca
+      const q = ciudadNow ? `?ciudad=${encodeURIComponent(ciudadNow)}` : '';
+      const res = await fetch(`${API_BASE}/api/empresas/${empresaIdParam}/impresoras${q}`);
+      const data = await res.json();
+      if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
+      setPrinters(data.data || []);
+    } catch (e) {
+      console.error('Error al cargar impresoras:', e);
+      setPrinters([]);
+    } finally {
+      setLoadingPrinters(false);
+    }
+  };
 
-    setPrinters(data.data || []);
-  } catch (e) {
-    console.error('Error al cargar impresoras:', e);
-    setPrinters([]);
-  } finally {
-    setLoadingPrinters(false);
-  }
-};
-
-    useEffect(() => {
+  // Carga inicial
+  useEffect(() => {
     loadEmpresas();
-    }, [ciudadActual]); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-
-// 👇 Pega este bloque dentro del componente (además de tus otros useEffect)
-useEffect(() => {
-  // helper: si no hay empresaId => logout
-  const enforceAuth = () => {
-    const empId = localStorage.getItem('empresaId');
-    if (!empId) {
-      // limpia UI
+  // === Auth + scope watcher (logout / cambio ciudad-empresa) ===
+  useEffect(() => {
+    const goHome = () => {
       setEmpresas([]);
       setSelectedEmpresa(null);
       setPrinters([]);
       localStorage.removeItem('selectedEmpresaId');
-      // manda a login (ajusta ruta si tu login es otra)
-      window.location.replace('/login');
-      return false;
-    }
-    return true;
-  };
+      window.location.href = window.location.origin; // sin rutas
+    };
 
-  // guarda scope previo para detectar cambios en esta misma pestaña
-  let prevEmpresaId = localStorage.getItem('empresaId');
-  let prevCiudad    = localStorage.getItem('ciudad');
+    const isAuthed = () => {
+      const empId = localStorage.getItem('empresaId');
+      if (!empId) { goHome(); return false; }
+      return true;
+    };
 
-  // al montar, valida auth y carga (si ya tienes otro useEffect que llama loadEmpresas está ok)
-  enforceAuth();
+    let prevEmpresaId = localStorage.getItem('empresaId') || null;
+    let prevCiudad    = localStorage.getItem('ciudad') || null;
 
-  const onFocus = () => {
-    // revalida auth
-    if (!enforceAuth()) return;
-    // detecta cambios de scope en esta pestaña
-    const curEmpresaId = localStorage.getItem('empresaId');
-    const curCiudad    = localStorage.getItem('ciudad');
-    if (curEmpresaId !== prevEmpresaId || curCiudad !== prevCiudad) {
+    if (!isAuthed()) return;
+
+    const handleScopeChange = () => {
+      if (!isAuthed()) return;
+
+      const curEmpresaId = localStorage.getItem('empresaId') || null;
+      const curCiudad    = localStorage.getItem('ciudad') || null;
+      const changed = (curEmpresaId !== prevEmpresaId) || (curCiudad !== prevCiudad);
+
       prevEmpresaId = curEmpresaId;
       prevCiudad    = curCiudad;
-      // resetea selección al cambiar de scope
-      localStorage.removeItem('selectedEmpresaId');
-      setSelectedEmpresa(null);
-      setPrinters([]);
-      setMode('list');
-      // recarga empresas para el nuevo scope
-      loadEmpresas();
-    }
+
+      if (changed) {
+        localStorage.removeItem('selectedEmpresaId');
+        setSelectedEmpresa(null);
+        setPrinters([]);
+        setMode('list');
+        loadEmpresas();                 // recarga lista acorde al nuevo scope
+      } else if (selectedEmpresa?._id) {
+        loadPrinters(selectedEmpresa._id); // refresca impresoras con ciudad fresca
+      }
+    };
+
+    const onFocus = () => handleScopeChange();
+    const onStorage = (e) => {
+      if (e.key === 'empresaId' || e.key === 'ciudad') handleScopeChange();
+    };
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('storage', onStorage);
+
+    // watchdog por si no disparan eventos
+    const watchdog = setInterval(() => {
+      const empId = localStorage.getItem('empresaId');
+      if (!empId) { goHome(); return; }
+      if (selectedEmpresa?._id) loadPrinters(selectedEmpresa._id);
+    }, 2500);
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('storage', onStorage);
+      clearInterval(watchdog);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedEmpresa?._id]);
+
+  // ====== acciones ======
+  const handleSelectEmpresa = async (emp) => {
+    setSelectedEmpresa(emp);
+    localStorage.setItem('selectedEmpresaId', emp._id);
+    setMode('empresa');
+    setExpandedPrinterId(null);
+    await loadPrinters(emp._id); // 👈 ciudad se toma adentro
   };
 
-  const onStorage = (e) => {
-    if (e.key === 'empresaId' || e.key === 'ciudad') {
-      // si el cambio viene de otra pestaña
-      onFocus();
-    }
-  };
-
-  window.addEventListener('focus', onFocus);
-  window.addEventListener('storage', onStorage);
-  return () => {
-    window.removeEventListener('focus', onFocus);
-    window.removeEventListener('storage', onStorage);
-  };
-}, []); 
-
-
-// ====== acciones ======
-const handleSelectEmpresa = async (emp) => {
-  setSelectedEmpresa(emp);
-  localStorage.setItem('selectedEmpresaId', emp._id);
-  setMode('empresa');
-  setExpandedPrinterId(null);
-  await loadPrinters(emp._id); // ← ya no pasamos ciudad
-};
   const handleCrearEmpresa = async () => {
     try {
       setErrorMsg(''); setSuccessMsg(''); setLoadingCreate(true);
@@ -243,9 +246,9 @@ const handleSelectEmpresa = async (emp) => {
 
       setEmpresas(prev => [{ _id: data.empresaId, nombre: nueva.nombre }, ...prev]);
       setSelectedEmpresa({ _id: data.empresaId, nombre: nueva.nombre });
-      localStorage.setItem('selectedEmpresaId', data.empresaId); // 👈 guardamos
+      localStorage.setItem('selectedEmpresaId', data.empresaId);
       setMode('empresa');
-      await loadPrinters(data.empresaId, ciudadActual);
+      await loadPrinters(data.empresaId); // 👈 sin ciudadActual
     } catch (e) {
       setErrorMsg(e.message);
     } finally {
@@ -253,7 +256,7 @@ const handleSelectEmpresa = async (emp) => {
     }
   };
 
-  // 👉 Ver ApiKey (abre el mismo modal fachero)
+  // 👉 Ver ApiKey (abre el modal)
   const verApiKeyEmpresa = async () => {
     if (!selectedEmpresa?._id) return;
     try {
@@ -265,7 +268,7 @@ const handleSelectEmpresa = async (emp) => {
 
       setEmpresaRecienCreada({
         empresaId: data.data._id,
-        apiKey: data.data.apiKey,  // 👈 AQUI VIENE LA API KEY
+        apiKey: data.data.apiKey,
         nombre: data.data.nombre
       });
       setModalOpen(true);
@@ -287,13 +290,10 @@ const handleSelectEmpresa = async (emp) => {
     try {
       setErrorMsg(''); setSuccessMsg('');
       setLoadingCreate(true);
-      const res = await fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`, {
-        method: 'DELETE'
-      });
+      const res = await fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`);
 
-      // Actualizar UI
       setEmpresas(prev => prev.filter(e => String(e._id) !== String(selectedEmpresa._id)));
       setSelectedEmpresa(null);
       localStorage.removeItem('selectedEmpresaId');
@@ -316,6 +316,8 @@ const handleSelectEmpresa = async (emp) => {
     const p = Math.round((Number(lvl) / Number(max)) * 100);
     return Math.max(0, Math.min(100, p));
   };
+
+  /* ======== A PARTIR DE AQUÍ DEJA TU JSX/RETURN COMO LO TIENES ======== */
 
 
 
