@@ -131,36 +131,99 @@ const loadEmpresas = async () => {
   }
 };
 
-  const loadPrinters = async (empresaIdParam, ciudadParam) => {
-    setLoadingPrinters(true);
-    try {
-      const q = ciudadParam ? `?ciudad=${encodeURIComponent(ciudadParam)}` : '';
-      const res = await fetch(`${API_BASE}/api/empresas/${empresaIdParam}/impresoras${q}`);
-      const data = await res.json();
-      if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
+// Reemplaza tu loadPrinters por este
+const loadPrinters = async (empresaIdParam) => {
+  setLoadingPrinters(true);
+  try {
+    // lee ciudad “fresca” del localStorage siempre
+    const ciudadNow = localStorage.getItem('ciudad');
+    const q = ciudadNow ? `?ciudad=${encodeURIComponent(ciudadNow)}` : '';
+    const res = await fetch(`${API_BASE}/api/empresas/${empresaIdParam}/impresoras${q}`);
+    const data = await res.json();
+    if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
 
-      setPrinters(data.data || []);
-    } catch (e) {
-      console.error('Error al cargar impresoras:', e);
-      setPrinters([]);
-    } finally {
-      setLoadingPrinters(false);
-    }
-  };
+    setPrinters(data.data || []);
+  } catch (e) {
+    console.error('Error al cargar impresoras:', e);
+    setPrinters([]);
+  } finally {
+    setLoadingPrinters(false);
+  }
+};
 
     useEffect(() => {
     loadEmpresas();
     }, [ciudadActual]); 
 
-  // ====== acciones ======
-  const handleSelectEmpresa = async (emp) => {
-    setSelectedEmpresa(emp);
-    localStorage.setItem('selectedEmpresaId', emp._id); // 👈 persistimos selección
-    setMode('empresa');
-    setExpandedPrinterId(null);
-    await loadPrinters(emp._id, ciudadActual);
+
+// 👇 Pega este bloque dentro del componente (además de tus otros useEffect)
+useEffect(() => {
+  // helper: si no hay empresaId => logout
+  const enforceAuth = () => {
+    const empId = localStorage.getItem('empresaId');
+    if (!empId) {
+      // limpia UI
+      setEmpresas([]);
+      setSelectedEmpresa(null);
+      setPrinters([]);
+      localStorage.removeItem('selectedEmpresaId');
+      // manda a login (ajusta ruta si tu login es otra)
+      window.location.replace('/login');
+      return false;
+    }
+    return true;
   };
 
+  // guarda scope previo para detectar cambios en esta misma pestaña
+  let prevEmpresaId = localStorage.getItem('empresaId');
+  let prevCiudad    = localStorage.getItem('ciudad');
+
+  // al montar, valida auth y carga (si ya tienes otro useEffect que llama loadEmpresas está ok)
+  enforceAuth();
+
+  const onFocus = () => {
+    // revalida auth
+    if (!enforceAuth()) return;
+    // detecta cambios de scope en esta pestaña
+    const curEmpresaId = localStorage.getItem('empresaId');
+    const curCiudad    = localStorage.getItem('ciudad');
+    if (curEmpresaId !== prevEmpresaId || curCiudad !== prevCiudad) {
+      prevEmpresaId = curEmpresaId;
+      prevCiudad    = curCiudad;
+      // resetea selección al cambiar de scope
+      localStorage.removeItem('selectedEmpresaId');
+      setSelectedEmpresa(null);
+      setPrinters([]);
+      setMode('list');
+      // recarga empresas para el nuevo scope
+      loadEmpresas();
+    }
+  };
+
+  const onStorage = (e) => {
+    if (e.key === 'empresaId' || e.key === 'ciudad') {
+      // si el cambio viene de otra pestaña
+      onFocus();
+    }
+  };
+
+  window.addEventListener('focus', onFocus);
+  window.addEventListener('storage', onStorage);
+  return () => {
+    window.removeEventListener('focus', onFocus);
+    window.removeEventListener('storage', onStorage);
+  };
+}, []); 
+
+
+// ====== acciones ======
+const handleSelectEmpresa = async (emp) => {
+  setSelectedEmpresa(emp);
+  localStorage.setItem('selectedEmpresaId', emp._id);
+  setMode('empresa');
+  setExpandedPrinterId(null);
+  await loadPrinters(emp._id); // ← ya no pasamos ciudad
+};
   const handleCrearEmpresa = async () => {
     try {
       setErrorMsg(''); setSuccessMsg(''); setLoadingCreate(true);
