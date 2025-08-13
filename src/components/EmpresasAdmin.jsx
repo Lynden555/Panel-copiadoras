@@ -16,15 +16,7 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 const API_BASE = 'https://copias-backend-production.up.railway.app';
 
 export default function EmpresasPanel() {
-  // ⛔️ Gate: si no hay sesión, regresa al inicio y no renderiza
-  const empresaIdLogin = localStorage.getItem('empresaId');
-  const ciudadActual   = localStorage.getItem('ciudad');
-  if (!empresaIdLogin) {
-    window.location.href = window.location.origin;
-    return null;
-  }
-
-  // izquierda
+  // ====== estado base (siempre al tope, sin condicionales) ======
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
@@ -48,6 +40,9 @@ export default function EmpresasPanel() {
 
   // confirm delete
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  // auth listo (evita return tempranos)
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   // ====== helpers ======
   const copy = async (txt) => {
@@ -88,7 +83,13 @@ export default function EmpresasPanel() {
     downloadFile(`config_${empresaRecienCreada.nombre.replace(/\s+/g,'_')}.json`, JSON.stringify(cfg, null, 2));
   };
 
-  // ====== data load ======
+  // ====== utils de scope ======
+  const getScope = () => ({
+    empresaId: localStorage.getItem('empresaId') || '',
+    ciudad:    localStorage.getItem('ciudad')    || '',
+  });
+
+  // ====== loaders ======
   const loadEmpresas = async () => {
     setLoadingEmpresas(true);
     try {
@@ -99,22 +100,16 @@ export default function EmpresasPanel() {
       const lista = data.data || [];
       setEmpresas(lista);
 
-      // Restaurar selección previa si existe
+      // restaurar selección previa si sigue existiendo
       const storedId = localStorage.getItem('selectedEmpresaId');
-      let toSelect = null;
-
-      if (storedId) {
-        toSelect = lista.find(e => String(e._id) === String(storedId)) || null;
-      }
-      if (!toSelect && lista.length === 1) {
-        toSelect = lista[0];
-      }
+      let toSelect = storedId ? lista.find(e => String(e._id) === String(storedId)) || null : null;
+      if (!toSelect && lista.length === 1) toSelect = lista[0];
 
       if (toSelect) {
         setSelectedEmpresa(toSelect);
         setMode('empresa');
         setExpandedPrinterId(null);
-        await loadPrinters(toSelect._id); // 👈 ciudad se toma adentro
+        await loadPrinters(toSelect._id);
       } else {
         setSelectedEmpresa(null);
         setMode('list');
@@ -122,9 +117,7 @@ export default function EmpresasPanel() {
       }
     } catch (e) {
       console.error(e);
-      setEmpresas([]);
-      setSelectedEmpresa(null);
-      setPrinters([]);
+      setEmpresas([]); setSelectedEmpresa(null); setPrinters([]);
     } finally {
       setLoadingEmpresas(false);
     }
@@ -133,11 +126,12 @@ export default function EmpresasPanel() {
   const loadPrinters = async (empresaIdParam) => {
     setLoadingPrinters(true);
     try {
-      const ciudadNow = localStorage.getItem('ciudad'); // 👈 ciudad fresca
-      const q = ciudadNow ? `?ciudad=${encodeURIComponent(ciudadNow)}` : '';
+      const { ciudad } = getScope(); // ciudad “fresca”
+      const q = ciudad ? `?ciudad=${encodeURIComponent(ciudad)}` : '';
       const res = await fetch(`${API_BASE}/api/empresas/${empresaIdParam}/impresoras${q}`);
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
+
       setPrinters(data.data || []);
     } catch (e) {
       console.error('Error al cargar impresoras:', e);
@@ -147,76 +141,68 @@ export default function EmpresasPanel() {
     }
   };
 
-  // Carga inicial
+  // ====== auth guard sin returns tempranos ======
   useEffect(() => {
-    loadEmpresas();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const { empresaId } = getScope();
+    if (!empresaId) {
+      // redirige sin romper el orden de hooks
+      window.location.replace('/login');
+      return;
+    }
+    setIsAuthReady(true);
   }, []);
 
-  // === Auth + scope watcher (logout / cambio ciudad-empresa) ===
+  // carga inicial cuando auth está listo
   useEffect(() => {
-    const goHome = () => {
-      setEmpresas([]);
-      setSelectedEmpresa(null);
-      setPrinters([]);
-      localStorage.removeItem('selectedEmpresaId');
-      window.location.href = window.location.origin; // sin rutas
-    };
+    if (!isAuthReady) return;
+    loadEmpresas();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthReady]);
 
-    const isAuthed = () => {
-      const empId = localStorage.getItem('empresaId');
-      if (!empId) { goHome(); return false; }
+  // detectar cambios de empresa/ciudad (logout o cambio de scope) vía focus/storage
+  useEffect(() => {
+    if (!isAuthReady) return;
+
+    let prev = getScope();
+
+    const enforceAuth = () => {
+      const { empresaId } = getScope();
+      if (!empresaId) {
+        // limpiar y mandar a login
+        setEmpresas([]); setSelectedEmpresa(null); setPrinters([]);
+        localStorage.removeItem('selectedEmpresaId');
+        window.location.replace('/login');
+        return false;
+      }
       return true;
     };
 
-    let prevEmpresaId = localStorage.getItem('empresaId') || null;
-    let prevCiudad    = localStorage.getItem('ciudad') || null;
-
-    if (!isAuthed()) return;
-
     const handleScopeChange = () => {
-      if (!isAuthed()) return;
-
-      const curEmpresaId = localStorage.getItem('empresaId') || null;
-      const curCiudad    = localStorage.getItem('ciudad') || null;
-      const changed = (curEmpresaId !== prevEmpresaId) || (curCiudad !== prevCiudad);
-
-      prevEmpresaId = curEmpresaId;
-      prevCiudad    = curCiudad;
-
-      if (changed) {
+      if (!enforceAuth()) return;
+      const cur = getScope();
+      if (cur.empresaId !== prev.empresaId || cur.ciudad !== prev.ciudad) {
+        prev = cur;
+        // reset UI y recargar con nuevo scope
         localStorage.removeItem('selectedEmpresaId');
         setSelectedEmpresa(null);
         setPrinters([]);
         setMode('list');
-        loadEmpresas();                 // recarga lista acorde al nuevo scope
-      } else if (selectedEmpresa?._id) {
-        loadPrinters(selectedEmpresa._id); // refresca impresoras con ciudad fresca
+        loadEmpresas();
       }
     };
 
-    const onFocus = () => handleScopeChange();
+    const onFocus   = () => handleScopeChange();
     const onStorage = (e) => {
       if (e.key === 'empresaId' || e.key === 'ciudad') handleScopeChange();
     };
 
     window.addEventListener('focus', onFocus);
     window.addEventListener('storage', onStorage);
-
-    // watchdog por si no disparan eventos
-    const watchdog = setInterval(() => {
-      const empId = localStorage.getItem('empresaId');
-      if (!empId) { goHome(); return; }
-      if (selectedEmpresa?._id) loadPrinters(selectedEmpresa._id);
-    }, 2500);
-
     return () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('storage', onStorage);
-      clearInterval(watchdog);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedEmpresa?._id]);
+  }, [isAuthReady]);
 
   // ====== acciones ======
   const handleSelectEmpresa = async (emp) => {
@@ -224,7 +210,7 @@ export default function EmpresasPanel() {
     localStorage.setItem('selectedEmpresaId', emp._id);
     setMode('empresa');
     setExpandedPrinterId(null);
-    await loadPrinters(emp._id); // 👈 ciudad se toma adentro
+    await loadPrinters(emp._id);
   };
 
   const handleCrearEmpresa = async () => {
@@ -248,7 +234,7 @@ export default function EmpresasPanel() {
       setSelectedEmpresa({ _id: data.empresaId, nombre: nueva.nombre });
       localStorage.setItem('selectedEmpresaId', data.empresaId);
       setMode('empresa');
-      await loadPrinters(data.empresaId); // 👈 sin ciudadActual
+      await loadPrinters(data.empresaId);
     } catch (e) {
       setErrorMsg(e.message);
     } finally {
@@ -256,20 +242,18 @@ export default function EmpresasPanel() {
     }
   };
 
-  // 👉 Ver ApiKey (abre el modal)
   const verApiKeyEmpresa = async () => {
     if (!selectedEmpresa?._id) return;
     try {
-      setErrorMsg(''); setSuccessMsg('');
-      setLoadingCreate(true);
+      setErrorMsg(''); setSuccessMsg(''); setLoadingCreate(true);
       const res = await fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`);
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`);
 
       setEmpresaRecienCreada({
         empresaId: data.data._id,
-        apiKey: data.data.apiKey,
-        nombre: data.data.nombre
+        apiKey:    data.data.apiKey,
+        nombre:    data.data.nombre
       });
       setModalOpen(true);
     } catch (e) {
@@ -279,7 +263,6 @@ export default function EmpresasPanel() {
     }
   };
 
-  // 👉 Eliminar empresa (con confirm)
   const solicitarEliminarEmpresa = () => {
     if (!selectedEmpresa?._id) return;
     setConfirmDeleteOpen(true);
@@ -288,8 +271,7 @@ export default function EmpresasPanel() {
   const confirmarEliminarEmpresa = async () => {
     if (!selectedEmpresa?._id) return;
     try {
-      setErrorMsg(''); setSuccessMsg('');
-      setLoadingCreate(true);
+      setErrorMsg(''); setSuccessMsg(''); setLoadingCreate(true);
       const res = await fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`);
@@ -316,8 +298,6 @@ export default function EmpresasPanel() {
     const p = Math.round((Number(lvl) / Number(max)) * 100);
     return Math.max(0, Math.min(100, p));
   };
-
-  /* ======== A PARTIR DE AQUÍ DEJA TU JSX/RETURN COMO LO TIENES ======== */
 
 
 
