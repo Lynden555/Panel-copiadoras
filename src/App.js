@@ -11,6 +11,7 @@ import Login from './components/Login';
 import RequireAuth from './components/RequireAuth'; // ✅ nuevo
 import AppCliente from './components/AppCliente';
 import AppTecnico from './components/AppTecnico';
+import EmpresaAdmin from './components/EmpresasAdmin';
 
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
@@ -168,6 +169,7 @@ useEffect(() => {
 
         <Route path="/app-cliente" element={<AppCliente />} />
         <Route path="/app-tecnico" element={<AppTecnico />} />
+        <Route path="/monitoreo" element={<EmpresaAdmin />} />
 
         {/* Redireccionamiento general */}
         <Route path="/" element={<Navigate to="/login" />} />
