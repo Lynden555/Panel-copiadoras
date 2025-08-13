@@ -88,50 +88,48 @@ export default function EmpresasPanel() {
   };
 
   // ====== data load ======
-  const loadEmpresas = async () => {
-    setLoadingEmpresas(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/empresas`);
-      const data = await res.json();
-      if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
+const loadEmpresas = async () => {
+  setLoadingEmpresas(true);
+  try {
+    const res = await fetch(`${API_BASE}/api/empresas`);
+    const data = await res.json();
+    if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
 
-      const todas = data.data || [];
-      // Si tu login limita a una empresa, dejamos solo esa (como tu Drag&Drop)
-      const lista = empresaIdLogin ? todas.filter(e => String(e._id) === String(empresaIdLogin)) : todas;
+    // 👇 NO filtramos por empresaIdLogin porque este módulo usa otra colección (Empresas ApiKey)
+    const lista = data.data || [];
+    setEmpresas(lista);
 
-      setEmpresas(lista);
+    // 🔧 Restaurar selección previa si existe y sigue viva
+    const storedId = localStorage.getItem('selectedEmpresaId');
+    let toSelect = null;
 
-      // 🔧 Restaurar selección previa si existe
-      const storedId = localStorage.getItem('selectedEmpresaId');
-      let toSelect = null;
-
-      if (storedId) {
-        toSelect = lista.find(e => String(e._id) === String(storedId)) || null;
-      }
-      // Si no hay almacenada pero hay una sola, autoselecciona
-      if (!toSelect && lista.length === 1) {
-        toSelect = lista[0];
-      }
-
-      if (toSelect) {
-        setSelectedEmpresa(toSelect);
-        setMode('empresa');
-        setExpandedPrinterId(null);
-        await loadPrinters(toSelect._id, ciudadActual);
-      } else {
-        setSelectedEmpresa(null);
-        setMode('list');
-        setPrinters([]);
-      }
-    } catch (e) {
-      console.error(e);
-      setEmpresas([]);
-      setSelectedEmpresa(null);
-      setPrinters([]);
-    } finally {
-      setLoadingEmpresas(false);
+    if (storedId) {
+      toSelect = lista.find(e => String(e._id) === String(storedId)) || null;
     }
-  };
+    // Si no hay almacenada pero hay una sola, autoselecciona
+    if (!toSelect && lista.length === 1) {
+      toSelect = lista[0];
+    }
+
+    if (toSelect) {
+      setSelectedEmpresa(toSelect);
+      setMode('empresa');
+      setExpandedPrinterId(null);
+      await loadPrinters(toSelect._id, ciudadActual); // ciudadActual opcional (si estás usando ese query)
+    } else {
+      setSelectedEmpresa(null);
+      setMode('list');
+      setPrinters([]);
+    }
+  } catch (e) {
+    console.error(e);
+    setEmpresas([]);
+    setSelectedEmpresa(null);
+    setPrinters([]);
+  } finally {
+    setLoadingEmpresas(false);
+  }
+};
 
   const loadPrinters = async (empresaIdParam, ciudadParam) => {
     setLoadingPrinters(true);
@@ -150,11 +148,9 @@ export default function EmpresasPanel() {
     }
   };
 
-  useEffect(() => {
-    // carga inicial y restaura selección
+    useEffect(() => {
     loadEmpresas();
-    // recarga si cambia scope
-  }, [empresaIdLogin, ciudadActual]);
+    }, [ciudadActual]); 
 
   // ====== acciones ======
   const handleSelectEmpresa = async (emp) => {
@@ -681,19 +677,6 @@ export default function EmpresasPanel() {
                     <ContentCopyIcon />
                 </IconButton>
                 </Box>
-    
-
-              <Typography variant="subtitle2" sx={{ color: '#89cff0' }}>
-                ApiKey
-              </Typography>
-              <Box sx={{ display:'flex', alignItems:'center', gap:1, p:1.2, border:'1px solid #2b4d74', borderRadius:1, bgcolor:'rgba(12,22,48,0.7)' }}>
-                <Typography sx={{ fontFamily:'monospace', wordBreak:'break-all', flex:1 }}>
-                  {empresaRecienCreada.apiKey}
-                </Typography>
-                <IconButton onClick={() => copy(empresaRecienCreada.apiKey)} sx={{ color:'#4fc3f7' }}>
-                  <ContentCopyIcon />
-                </IconButton>
-              </Box>
 
               <Stack direction="row" spacing={1.5} sx={{ pt: 1 }}>
                 <Button startIcon={<DownloadIcon />} onClick={downloadEnv}
