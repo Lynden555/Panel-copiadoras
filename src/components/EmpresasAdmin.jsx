@@ -12,6 +12,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import DevicesIcon from '@mui/icons-material/Devices';
 import PrintIcon from '@mui/icons-material/Print';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
+import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 
 // 🔧 Backend base
 const API_BASE = 'https://copias-backend-production.up.railway.app';
@@ -38,6 +40,13 @@ export default function EmpresasPanel() {
   const [printers, setPrinters] = useState([]);
   const [loadingPrinters, setLoadingPrinters] = useState(false);
   const [expandedPrinterId, setExpandedPrinterId] = useState(null);
+
+  // confirm delete
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+
+  // scope del login (si lo usas)
+  const ciudadActual = localStorage.getItem('ciudad');
+  const empresaIdLogin = localStorage.getItem('empresaId');
 
   // ====== helpers ======
   const copy = async (txt) => {
@@ -85,40 +94,78 @@ export default function EmpresasPanel() {
       const res = await fetch(`${API_BASE}/api/empresas`);
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
-      setEmpresas(data.data || []);
+
+      let lista = data.data || [];
+
+      // Si el login está scopeado a una sola empresa, filtra (como tickets)
+      if (empresaIdLogin) {
+        lista = lista.filter(e => String(e._id) === String(empresaIdLogin));
+      }
+
+      setEmpresas(lista);
+
+      // 🔧 Restaurar selección previa si existe
+      const storedId = localStorage.getItem('selectedEmpresaId');
+      let toSelect = null;
+
+      if (storedId) {
+        toSelect = lista.find(e => String(e._id) === String(storedId)) || null;
+      }
+      // Si no hay almacenada pero hay una sola, autoselecciona
+      if (!toSelect && lista.length === 1) {
+        toSelect = lista[0];
+      }
+
+      if (toSelect) {
+        setSelectedEmpresa(toSelect);
+        setMode('empresa');
+        setExpandedPrinterId(null);
+        await loadPrinters(toSelect._id, ciudadActual);
+      } else {
+        setSelectedEmpresa(null);
+        setMode('list');
+        setPrinters([]);
+      }
     } catch (e) {
-      setEmpresas([]);
       console.error(e);
+      setEmpresas([]);
+      setSelectedEmpresa(null);
+      setPrinters([]);
     } finally {
       setLoadingEmpresas(false);
     }
   };
 
-  const loadPrinters = async (empresaId) => {
+  const loadPrinters = async (empresaIdParam, ciudadParam) => {
     setLoadingPrinters(true);
     try {
-      const res = await fetch(`${API_BASE}/api/empresas/${empresaId}/impresoras`);
+      const q = ciudadParam ? `?ciudad=${encodeURIComponent(ciudadParam)}` : '';
+      const res = await fetch(`${API_BASE}/api/empresas/${empresaIdParam}/impresoras${q}`);
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
+
       setPrinters(data.data || []);
     } catch (e) {
+      console.error('Error al cargar impresoras:', e);
       setPrinters([]);
-      console.error(e);
     } finally {
       setLoadingPrinters(false);
     }
   };
 
   useEffect(() => {
+    // carga inicial y restaura selección
     loadEmpresas();
-  }, []);
+    // si cambia scope del login, recargar
+  }, [empresaIdLogin, ciudadActual]);
 
   // ====== acciones ======
   const handleSelectEmpresa = async (emp) => {
     setSelectedEmpresa(emp);
+    localStorage.setItem('selectedEmpresaId', emp._id); // 👈 persistimos selección
     setMode('empresa');
     setExpandedPrinterId(null);
-    await loadPrinters(emp._id);
+    await loadPrinters(emp._id, ciudadActual);
   };
 
   const handleCrearEmpresa = async () => {
@@ -138,16 +185,70 @@ export default function EmpresasPanel() {
       setSuccessMsg(`Empresa creada: ${nombre.trim()}`);
       setNombre('');
 
-      // agrega a la lista izquierda
       setEmpresas(prev => [{ _id: data.empresaId, nombre: nueva.nombre }, ...prev]);
-      // selecciona automáticamente
       setSelectedEmpresa({ _id: data.empresaId, nombre: nueva.nombre });
+      localStorage.setItem('selectedEmpresaId', data.empresaId); // 👈 guardamos
       setMode('empresa');
-      await loadPrinters(data.empresaId);
+      await loadPrinters(data.empresaId, ciudadActual);
     } catch (e) {
       setErrorMsg(e.message);
     } finally {
       setLoadingCreate(false);
+    }
+  };
+
+  // 👉 Ver ApiKey (abre el mismo modal fachero)
+  const verApiKeyEmpresa = async () => {
+    if (!selectedEmpresa?._id) return;
+    try {
+      setErrorMsg(''); setSuccessMsg('');
+      setLoadingCreate(true);
+      const res = await fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`);
+      const data = await res.json();
+      if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`);
+
+      setEmpresaRecienCreada({
+        empresaId: data.data._id,
+        apiKey: data.data.apiKey,
+        nombre: data.data.nombre
+      });
+      setModalOpen(true);
+    } catch (e) {
+      setErrorMsg(e.message);
+    } finally {
+      setLoadingCreate(false);
+    }
+  };
+
+  // 👉 Eliminar empresa (con confirm)
+  const solicitarEliminarEmpresa = () => {
+    if (!selectedEmpresa?._id) return;
+    setConfirmDeleteOpen(true);
+  };
+
+  const confirmarEliminarEmpresa = async () => {
+    if (!selectedEmpresa?._id) return;
+    try {
+      setErrorMsg(''); setSuccessMsg('');
+      setLoadingCreate(true);
+      const res = await fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`);
+
+      // Actualizar UI
+      setEmpresas(prev => prev.filter(e => String(e._id) !== String(selectedEmpresa._id)));
+      setSelectedEmpresa(null);
+      localStorage.removeItem('selectedEmpresaId');
+      setPrinters([]);
+      setMode('list');
+      setSuccessMsg('Empresa eliminada correctamente');
+    } catch (e) {
+      setErrorMsg(e.message);
+    } finally {
+      setLoadingCreate(false);
+      setConfirmDeleteOpen(false);
     }
   };
 
@@ -157,6 +258,7 @@ export default function EmpresasPanel() {
     const p = Math.round((Number(lvl) / Number(max)) * 100);
     return Math.max(0, Math.min(100, p));
   };
+
 
   // ====== RENDER ======
   return (
@@ -346,132 +448,180 @@ export default function EmpresasPanel() {
           </Card>
         )}
 
-        {mode === 'empresa' && selectedEmpresa && (
-          <Card
-            sx={{
-              bgcolor: '#101b3a', color: 'white',
-              border: '2px solid #143a66', borderRadius: '16px',
-              boxShadow:
-                '0 0 0 1px rgba(41,182,246,0.15), 0 10px 30px rgba(0,0,0,0.45), inset 0 0 40px rgba(79,195,247,0.08)',
-              overflow: 'hidden',
-            }}
-          >
-            <Box sx={{ px:3, py:2, borderBottom: '1px solid rgba(79,195,247,0.2)', display:'flex', alignItems:'center', gap:1 }}>
-              <DevicesIcon sx={{ color:'#4fc3f7' }} />
-              <Typography variant="h6" sx={{ color:'#4fc3f7', fontWeight:800 }}>
-                {selectedEmpresa.nombre}
-              </Typography>
-              <Chip label={`Empresa ID: ${selectedEmpresa._id}`} size="small" sx={{ ml:1, color:'#bfe7ff', border:'1px solid #2b4d74' }} />
-            </Box>
+{mode === 'empresa' && selectedEmpresa && (
+  <Card
+    sx={{
+      bgcolor: '#101b3a', color: 'white',
+      border: '2px solid #143a66', borderRadius: '16px',
+      boxShadow:
+        '0 0 0 1px rgba(41,182,246,0.15), 0 10px 30px rgba(0,0,0,0.45), inset 0 0 40px rgba(79,195,247,0.08)',
+      overflow: 'hidden',
+    }}
+  >
+    {/* Encabezado con botones */}
+    <Box sx={{ px: 3, py: 2, borderBottom: '1px solid rgba(79,195,247,0.2)', display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+      <DevicesIcon sx={{ color: '#4fc3f7' }} />
+      <Typography variant="h6" sx={{ color: '#4fc3f7', fontWeight: 800 }}>
+        {selectedEmpresa.nombre}
+      </Typography>
+      <Chip label={`Empresa ID: ${selectedEmpresa._id}`} size="small" sx={{ ml: 1, color: '#bfe7ff', border: '1px solid #2b4d74' }} />
+      <Box sx={{ flex: 1 }} />
 
-            <CardContent sx={{ p: 2 }}>
-              {loadingPrinters && <LinearProgress />}
+      {/* Botón Ver API Key */}
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={() => {
+          setEmpresaRecienCreada({
+            empresaId: selectedEmpresa._id,
+            apiKey: selectedEmpresa.apiKey || '',
+            nombre: selectedEmpresa.nombre
+          });
+          setModalOpen(true);
+        }}
+      >
+        Ver API Key
+      </Button>
 
-              {!loadingPrinters && printers.length === 0 && (
-                <Typography sx={{ color:'#89cff0', p:2 }}>
-                  Aún no hay impresoras reportadas por el Agente para esta empresa.
+      {/* Botón Eliminar empresa */}
+      <Button
+        variant="outlined"
+        color="error"
+        size="small"
+        onClick={() => {
+          if (window.confirm(`¿Seguro que quieres eliminar la empresa "${selectedEmpresa.nombre}"?`)) {
+            fetch(`${API_BASE}/api/empresas/${selectedEmpresa._id}`, { method: 'DELETE' })
+              .then(res => res.json())
+              .then(data => {
+                if (data.ok) {
+                  setEmpresas(prev => prev.filter(e => e._id !== selectedEmpresa._id));
+                  setSelectedEmpresa(null);
+                  setPrinters([]);
+                  setMode('list');
+                  setSuccessMsg(`Empresa "${selectedEmpresa.nombre}" eliminada`);
+                } else {
+                  setErrorMsg(data.error || 'No se pudo eliminar la empresa');
+                }
+              })
+              .catch(err => {
+                console.error(err);
+                setErrorMsg('Error eliminando la empresa');
+              });
+          }
+        }}
+      >
+        Eliminar
+      </Button>
+    </Box>
+
+    <CardContent sx={{ p: 2 }}>
+      {loadingPrinters && <LinearProgress />}
+
+      {!loadingPrinters && printers.length === 0 && (
+        <Typography sx={{ color: '#89cff0', p: 2 }}>
+          Aún no hay impresoras reportadas por el Agente para esta empresa.
+        </Typography>
+      )}
+
+      <Stack spacing={1.5}>
+        {printers.map((p) => {
+          const latest = p.latest || {};
+          const low = !!latest.lowToner;
+          const online = latest.online !== false; // default true
+          return (
+            <Box
+              key={p._id}
+              sx={{
+                p: 1.5, borderRadius: 2,
+                border: '1px solid rgba(79,195,247,0.18)',
+                bgcolor: 'rgba(12,22,48,0.35)',
+              }}
+            >
+              <Box
+                onClick={() => setExpandedPrinterId(expandedPrinterId === p._id ? null : p._id)}
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
+              >
+                <PrintIcon sx={{ color: '#4fc3f7' }} />
+                <Typography sx={{ fontWeight: 800 }}>
+                  {p.printerName || p.sysName || p.host}
                 </Typography>
-              )}
+                <Chip
+                  label={online ? 'Online' : 'Offline'}
+                  size="small"
+                  sx={{ ml: 1, color: online ? '#9de6a2' : '#ff9e9e', border: '1px solid #2b4d74' }}
+                />
+                {low && (
+                  <Tooltip title="Tóner bajo">
+                    <WarningAmberIcon sx={{ color: '#ffb74d', ml: .5 }} />
+                  </Tooltip>
+                )}
+                <Box sx={{ flex: 1 }} />
+                <Typography sx={{ color: '#89cff0' }}>{p.host}</Typography>
+              </Box>
 
-              <Stack spacing={1.5}>
-                {printers.map((p) => {
-                  const latest = p.latest || {};
-                  const low = !!latest.lowToner;
-                  const online = latest.online !== false; // default true
-                  return (
-                    <Box
-                      key={p._id}
-                      sx={{
-                        p: 1.5, borderRadius: 2,
-                        border: '1px solid rgba(79,195,247,0.18)',
-                        bgcolor: 'rgba(12,22,48,0.35)',
-                      }}
-                    >
-                      <Box
-                        onClick={() => setExpandedPrinterId(expandedPrinterId === p._id ? null : p._id)}
-                        sx={{ display:'flex', alignItems:'center', gap:1, cursor:'pointer' }}
-                      >
-                        <PrintIcon sx={{ color:'#4fc3f7' }} />
-                        <Typography sx={{ fontWeight:800 }}>
-                          {p.printerName || p.sysName || p.host}
-                        </Typography>
-                        <Chip
-                          label={online ? 'Online' : 'Offline'}
-                          size="small"
-                          sx={{ ml:1, color: online ? '#9de6a2' : '#ff9e9e', border:'1px solid #2b4d74' }}
-                        />
-                        {low && (
-                          <Tooltip title="Tóner bajo">
-                            <WarningAmberIcon sx={{ color:'#ffb74d', ml: .5 }} />
-                          </Tooltip>
-                        )}
-                        <Box sx={{ flex:1 }} />
-                        <Typography sx={{ color:'#89cff0' }}>{p.host}</Typography>
-                      </Box>
+              {expandedPrinterId === p._id && (
+                <>
+                  <Divider sx={{ my: 1, borderColor: 'rgba(79,195,247,0.2)' }} />
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                    <Box>
+                      <Typography sx={{ color: '#9fd8ff' }}>Serial</Typography>
+                      <Typography sx={{ fontFamily: 'monospace' }}>{p.serial || '—'}</Typography>
 
-                      {expandedPrinterId === p._id && (
-                        <>
-                          <Divider sx={{ my: 1, borderColor:'rgba(79,195,247,0.2)' }} />
-                          <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2 }}>
-                            <Box>
-                              <Typography sx={{ color:'#9fd8ff' }}>Serial</Typography>
-                              <Typography sx={{ fontFamily:'monospace' }}>{p.serial || '—'}</Typography>
+                      <Typography sx={{ color: '#9fd8ff', mt: 1 }}>Modelo</Typography>
+                      <Typography sx={{ fontFamily: 'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
 
-                              <Typography sx={{ color:'#9fd8ff', mt:1 }}>Modelo</Typography>
-                              <Typography sx={{ fontFamily:'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
+                      <Typography sx={{ color: '#9fd8ff', mt: 1 }}>Última lectura</Typography>
+                      <Typography sx={{ fontFamily: 'monospace' }}>
+                        {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
+                      </Typography>
 
-                              <Typography sx={{ color:'#9fd8ff', mt:1 }}>Última lectura</Typography>
-                              <Typography sx={{ fontFamily:'monospace' }}>
-                                {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
-                              </Typography>
-
-                              <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
-                              <Typography sx={{ fontWeight:800 }}>{latest.lastPageCount ?? '—'}</Typography>
-                            </Box>
-
-                            <Box>
-                              <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
-                              <Stack spacing={1}>
-                                {(latest.lastSupplies || []).map((s, idx) => {
-                                  const pct = tonerPercent(s.level, s.max);
-                                  return (
-                                    <Box key={idx}>
-                                      <Box sx={{ display:'flex', justifyContent:'space-between' }}>
-                                        <Typography>{s.name || `Supply ${idx+1}`}</Typography>
-                                        <Typography sx={{ color: pct<=20 ? '#ff9e9e' : '#9de6a2' }}>
-                                          {isFinite(pct) ? `${pct}%` : '—'}
-                                        </Typography>
-                                      </Box>
-                                      <LinearProgress
-                                        variant="determinate"
-                                        value={isFinite(pct) ? pct : 0}
-                                        sx={{
-                                          height: 8,
-                                          borderRadius: 6,
-                                          bgcolor: 'rgba(255,255,255,0.08)',
-                                          '& .MuiLinearProgress-bar': {
-                                            transition: 'width .3s',
-                                          }
-                                        }}
-                                      />
-                                    </Box>
-                                  );
-                                })}
-                                {(!latest.lastSupplies || latest.lastSupplies.length === 0) && (
-                                  <Typography sx={{ color:'#89cff0' }}>Sin datos de tóner.</Typography>
-                                )}
-                              </Stack>
-                            </Box>
-                          </Box>
-                        </>
-                      )}
+                      <Typography sx={{ color: '#9fd8ff', mt: 1 }}>Contador de páginas</Typography>
+                      <Typography sx={{ fontWeight: 800 }}>{latest.lastPageCount ?? '—'}</Typography>
                     </Box>
-                  );
-                })}
-              </Stack>
-            </CardContent>
-          </Card>
-        )}
+
+                    <Box>
+                      <Typography sx={{ color: '#9fd8ff', mb: 1 }}>Consumibles</Typography>
+                      <Stack spacing={1}>
+                        {(latest.lastSupplies || []).map((s, idx) => {
+                          const pct = tonerPercent(s.level, s.max);
+                          return (
+                            <Box key={idx}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <Typography>{s.name || `Supply ${idx + 1}`}</Typography>
+                                <Typography sx={{ color: pct <= 20 ? '#ff9e9e' : '#9de6a2' }}>
+                                  {isFinite(pct) ? `${pct}%` : '—'}
+                                </Typography>
+                              </Box>
+                              <LinearProgress
+                                variant="determinate"
+                                value={isFinite(pct) ? pct : 0}
+                                sx={{
+                                  height: 8,
+                                  borderRadius: 6,
+                                  bgcolor: 'rgba(255,255,255,0.08)',
+                                  '& .MuiLinearProgress-bar': {
+                                    transition: 'width .3s',
+                                  }
+                                }}
+                              />
+                            </Box>
+                          );
+                        })}
+                        {(!latest.lastSupplies || latest.lastSupplies.length === 0) && (
+                          <Typography sx={{ color: '#89cff0' }}>Sin datos de tóner.</Typography>
+                        )}
+                      </Stack>
+                    </Box>
+                  </Box>
+                </>
+              )}
+            </Box>
+          );
+        })}
+      </Stack>
+    </CardContent>
+  </Card>
+)}
       </Box>
 
       {/* MODAL: ApiKey tras crear */}
