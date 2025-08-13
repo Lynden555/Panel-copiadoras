@@ -95,12 +95,9 @@ export default function EmpresasPanel() {
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
 
-      let lista = data.data || [];
-
-      // Si el login está scopeado a una sola empresa, filtra (como tickets)
-      if (empresaIdLogin) {
-        lista = lista.filter(e => String(e._id) === String(empresaIdLogin));
-      }
+      const todas = data.data || [];
+      // Si tu login limita a una empresa, dejamos solo esa (como tu Drag&Drop)
+      const lista = empresaIdLogin ? todas.filter(e => String(e._id) === String(empresaIdLogin)) : todas;
 
       setEmpresas(lista);
 
@@ -156,7 +153,7 @@ export default function EmpresasPanel() {
   useEffect(() => {
     // carga inicial y restaura selección
     loadEmpresas();
-    // si cambia scope del login, recargar
+    // recarga si cambia scope
   }, [empresaIdLogin, ciudadActual]);
 
   // ====== acciones ======
@@ -209,7 +206,7 @@ export default function EmpresasPanel() {
 
       setEmpresaRecienCreada({
         empresaId: data.data._id,
-        apiKey: data.data.apiKey,
+        apiKey: data.data.apiKey,  // 👈 AQUI VIENE LA API KEY
         nombre: data.data.nombre
       });
       setModalOpen(true);
@@ -252,12 +249,15 @@ export default function EmpresasPanel() {
     }
   };
 
+  const cancelarEliminarEmpresa = () => setConfirmDeleteOpen(false);
+
   // ====== UI helpers ======
   const tonerPercent = (lvl, max) => {
     if (!max || max <= 0) return 0;
     const p = Math.round((Number(lvl) / Number(max)) * 100);
     return Math.max(0, Math.min(100, p));
   };
+
 
 
   // ====== RENDER ======
@@ -669,6 +669,19 @@ export default function EmpresasPanel() {
                   <ContentCopyIcon />
                 </IconButton>
               </Box>
+
+                <Typography variant="subtitle2" sx={{ color: '#89cff0' }}>
+                ApiKey
+                </Typography>
+                <Box sx={{ display:'flex', alignItems:'center', gap:1, p:1, border:'1px solid #2b4d74', borderRadius:1, bgcolor:'rgba(12,22,48,0.55)' }}>
+                <Typography sx={{ fontFamily:'monospace', wordBreak:'break-all', flex:1 }}>
+                    {empresaRecienCreada.apiKey || '—'}
+                </Typography>
+                <IconButton onClick={() => empresaRecienCreada.apiKey && copy(empresaRecienCreada.apiKey)} sx={{ color:'#4fc3f7' }}>
+                    <ContentCopyIcon />
+                </IconButton>
+                </Box>
+    
 
               <Typography variant="subtitle2" sx={{ color: '#89cff0' }}>
                 ApiKey
