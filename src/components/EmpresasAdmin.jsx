@@ -93,7 +93,9 @@ export default function EmpresasPanel() {
   const loadEmpresas = async () => {
     setLoadingEmpresas(true);
     try {
-      const res = await fetch(`${API_BASE}/api/empresas`);
+    const { empresaId, ciudad } = getScope(); // usa lo que ya definiste arriba
+    const qs = new URLSearchParams({ empresaId, ciudad }).toString();
+    const res = await fetch(`${API_BASE}/api/empresas?${qs}`);
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar empresas');
 
@@ -219,7 +221,10 @@ export default function EmpresasPanel() {
       const res = await fetch(`${API_BASE}/api/empresas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre.trim() })
+        body: JSON.stringify({
+        nombre: nombre.trim(),
+        empresaId: localStorage.getItem('empresaId'),
+        ciudad: localStorage.getItem('ciudad') })
       });
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || `Error ${res.status}`);
