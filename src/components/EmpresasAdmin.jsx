@@ -96,22 +96,11 @@ useEffect(() => {
     downloadFile(`config_${empresaRecienCreada.nombre.replace(/\s+/g,'_')}.json`, JSON.stringify(cfg, null, 2));
   };
 
-// ⏱️ Umbral de frescura: 2 minutos
 
-// ⏱️ Online si la última lectura es menor a 2 min
+  // ⏱️ Umbral de frescura: 2 minutos
 const STALE_MS = 2 * 60 * 1000;
-// 🎛️ Tolerancia mientras refrescas desde backend (evita parpadeos)
-const GRACE_MS = 30 * 1000;
-
-const isOnlineCalc = (lastSeenAt, onlineFlag, nowTs, isLoading) => {
-  if (!lastSeenAt) return false;
-  if (onlineFlag === false) return false; // backend lo forzó a false
-  const ts = new Date(lastSeenAt).getTime();
-  if (!Number.isFinite(ts)) return false;
-  const age = nowTs - ts;
-  const threshold = STALE_MS + (isLoading ? GRACE_MS : 0);
-  return age <= threshold;
-};
+// 🎛️ Holgura de UI: si llegó una lectura nueva, mantenemos "online" localmente hasta…
+const GRACE_MS = 60 * 1000; // 60s de gracia visual para evitar parpadeo
 
 // repintado periódico (evita recargar la página)
 const [now, setNow] = useState(Date.now());
@@ -120,39 +109,56 @@ useEffect(() => {
   return () => clearInterval(t);
 }, []);
 
+// Guardamos, por impresora, (a) el último lastSeenAt visto y (b) hasta cuándo mantener online
+const lastSeenRef = useRef(new Map());      // id -> ISO lastSeenAt
+const holdUntilRef = useRef(new Map());     // id -> timestamp (ms epoch)
 
-const isReallyOnline = (latest, nowTs = Date.now()) => {
-  if (!latest) return false;
-
-  // 🚨 Señales fuertes de offline
-  if (!latest.serial) return false;
-  if (latest.lastPageCount == null) return false; // null o undefined
-
-  // 🚨 Si el backend explícitamente manda false
-  if (latest.online === false) return false;
-
-  // ⏱️ Si la última lectura ya es vieja (2 min)
-  if (!latest.lastSeenAt) return false;
-  const age = nowTs - new Date(latest.lastSeenAt).getTime();
-  if (age > 2 * 60 * 1000) return false;
-
-  // ✅ Si pasó todos los checks
-  return true;
-};
-
-// memoriza el último lastSeenAt por impresora para no “perder” el online entre refrescos
-const lastSeenRef = useRef(new Map());
-const applyAndRemember = (list) => {
-  const prev = lastSeenRef.current;
-  const merged = (list || []).map(p => {
+// Fusiona lista nueva con lo recordado y extiende "online" si hay nueva lectura
+const applyAndRemember = (list = []) => {
+  const merged = list.map((p) => {
     const latest = p.latest || {};
-    const remembered = prev.get(p._id) || null;
-    const _lastSeenAt = latest.lastSeenAt || remembered; // conserva si no llegó en esta vuelta
-    return { ...p, _lastSeenAt };
+    const prevSeen = lastSeenRef.current.get(p._id) || null;
+    const newSeen  = latest.lastSeenAt || prevSeen;
+
+    // si la lectura es más nueva que la recordada, extender "holdUntil"
+    if (latest.lastSeenAt && (!prevSeen || new Date(latest.lastSeenAt) > new Date(prevSeen))) {
+      holdUntilRef.current.set(p._id, Date.now() + STALE_MS + GRACE_MS);
+    }
+
+    // si no tenemos holdUntil previo, inicialízalo cuando hay lastSeenAt
+    if (newSeen && !holdUntilRef.current.has(p._id)) {
+      holdUntilRef.current.set(p._id, Date.now() + STALE_MS + GRACE_MS);
+    }
+
+    // persistimos el lastSeenAt consolidado
+    lastSeenRef.current.set(p._id, newSeen || null);
+
+    return {
+      ...p,
+      _lastSeenAt: newSeen || null,
+      _holdUntil: holdUntilRef.current.get(p._id) || 0,
+    };
   });
-  lastSeenRef.current = new Map(merged.map(p => [p._id, p._lastSeenAt]));
+
+  // Limpieza opcional de ids que ya no existen
+  const idsNow = new Set(merged.map(p => p._id));
+  for (const id of lastSeenRef.current.keys()) if (!idsNow.has(id)) lastSeenRef.current.delete(id);
+  for (const id of holdUntilRef.current.keys()) if (!idsNow.has(id)) holdUntilRef.current.delete(id);
+
   setPrinters(merged);
 };
+
+// Cálculo final para UI: si estamos dentro del holdUntil -> Online; si no, usa antigüedad
+const isOnlineUI = (p, nowTs = Date.now()) => {
+  const latest = p.latest || {};
+  if (latest.online === false) return false;               // backend lo forzó
+  if ((p._holdUntil || 0) > nowTs) return true;            // sticky online activo
+  if (!p._lastSeenAt) return false;
+  const age = nowTs - new Date(p._lastSeenAt).getTime();
+  return age <= STALE_MS;                                   // fallback por antigüedad
+};
+
+
 
   // ====== utils de scope ======
   const getScope = () => ({
@@ -645,9 +651,7 @@ const applyAndRemember = (list) => {
   {printers.map((p) => {
     const latest = p.latest || {};
     const low = !!latest.lowToner;
-    const lastSeenAt = p._lastSeenAt || latest.lastSeenAt || null;
-    const online = isReallyOnline(latest, now);
-
+    const online = isOnlineUI(p, now);
     return (
       <Box
         key={p._id}
