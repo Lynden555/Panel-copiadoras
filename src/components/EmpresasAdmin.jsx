@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
 import {
   Box, Card, CardContent, Typography, Button, TextField, Stack, Alert,
   Dialog, DialogTitle, DialogContent, DialogActions, IconButton, Divider,
@@ -44,6 +44,19 @@ export default function EmpresasPanel() {
   // auth listo (evita return tempranos)
   const [isAuthReady, setIsAuthReady] = useState(false);
 
+  // 🔁 Auto-refresco cada 120s para traer nuevas lecturas del backend
+useEffect(() => {
+  if (!isAuthReady) return;
+  const tick = () => {
+    if (selectedEmpresa?._id) {
+      loadPrinters(selectedEmpresa._id);
+    }
+  };
+  // opcional: primer tick inmediato
+  const t = setInterval(tick, 120_000);
+  return () => clearInterval(t);
+}, [isAuthReady, selectedEmpresa?._id]); 
+
   // ====== helpers ======
   const copy = async (txt) => {
     try { await navigator.clipboard.writeText(txt); setSuccessMsg('Copiado al portapapeles'); }
@@ -84,21 +97,41 @@ export default function EmpresasPanel() {
   };
 
 // ⏱️ Umbral de frescura: 2 minutos
-const STALE_MS = 2 * 60 * 1000;
 
-// Forzamos repintado cada 30s para que el chip cambie a Offline sin recargar datos.
+// ⏱️ Online si la última lectura es menor a 2 min
+const STALE_MS = 2 * 60 * 1000;
+// 🎛️ Tolerancia mientras refrescas desde backend (evita parpadeos)
+const GRACE_MS = 30 * 1000;
+
+const isOnlineCalc = (lastSeenAt, onlineFlag, nowTs, isLoading) => {
+  if (!lastSeenAt) return false;
+  if (onlineFlag === false) return false; // backend lo forzó a false
+  const ts = new Date(lastSeenAt).getTime();
+  if (!Number.isFinite(ts)) return false;
+  const age = nowTs - ts;
+  const threshold = STALE_MS + (isLoading ? GRACE_MS : 0);
+  return age <= threshold;
+};
+
+// repintado periódico (evita recargar la página)
 const [now, setNow] = useState(Date.now());
 useEffect(() => {
-  const t = setInterval(() => setNow(Date.now()), 30_000);
+  const t = setInterval(() => setNow(Date.now()), 15_000);
   return () => clearInterval(t);
 }, []);
 
-// Calcula si está online: respeta latest.online===false y revisa antigüedad
-const isOnline = (latest, nowTs = Date.now()) => {
-  if (!latest?.lastSeenAt) return false;
-  if (latest.online === false) return false; // si el backend lo marca en false
-  const age = nowTs - new Date(latest.lastSeenAt).getTime();
-  return age <= STALE_MS;
+// memoriza el último lastSeenAt por impresora para no “perder” el online entre refrescos
+const lastSeenRef = useRef(new Map());
+const applyAndRemember = (list) => {
+  const prev = lastSeenRef.current;
+  const merged = (list || []).map(p => {
+    const latest = p.latest || {};
+    const remembered = prev.get(p._id) || null;
+    const _lastSeenAt = latest.lastSeenAt || remembered; // conserva si no llegó en esta vuelta
+    return { ...p, _lastSeenAt };
+  });
+  lastSeenRef.current = new Map(merged.map(p => [p._id, p._lastSeenAt]));
+  setPrinters(merged);
 };
 
   // ====== utils de scope ======
@@ -152,7 +185,7 @@ const isOnline = (latest, nowTs = Date.now()) => {
       const data = await res.json();
       if (!res.ok || !data?.ok) throw new Error(data?.error || 'No se pudieron cargar impresoras');
 
-      setPrinters(data.data || []);
+    applyAndRemember(data.data || []);
     } catch (e) {
       console.error('Error al cargar impresoras:', e);
       setPrinters([]);
@@ -592,7 +625,8 @@ const isOnline = (latest, nowTs = Date.now()) => {
   {printers.map((p) => {
     const latest = p.latest || {};
     const low = !!latest.lowToner;
-    const online = isOnline(latest, now);
+    const lastSeenAt = p._lastSeenAt || latest.lastSeenAt || null;
+    const online = isOnlineCalc(lastSeenAt, latest.online, now, loadingPrinters);
 
     return (
       <Box
