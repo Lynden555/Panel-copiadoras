@@ -304,6 +304,18 @@ export default function EmpresasPanel() {
     return Math.max(0, Math.min(100, p));
   };
 
+  // Considera "offline" si no hay lecturas en los últimos 5 minutos.
+// Si cambiaste el envío del Agente a cada 2 min, 5 min va perfecto como colchón.
+const STALE_MS = 5 * 60 * 1000;
+
+const isOnline = (latest) => {
+  if (!latest?.lastSeenAt) return false;
+  const age = Date.now() - new Date(latest.lastSeenAt).getTime();
+  // Además respeta el flag latest.online si el backend lo marca en false
+  if (latest.online === false) return false;
+  return age <= STALE_MS;
+};
+
 
 
   // ====== RENDER ======
@@ -569,102 +581,121 @@ export default function EmpresasPanel() {
         </Typography>
       )}
 
-      <Stack spacing={1.5}>
-        {printers.map((p) => {
-          const latest = p.latest || {};
-          const low = !!latest.lowToner;
-          const online = latest.online !== false; // default true
-          return (
-            <Box
-              key={p._id}
-              sx={{
-                p: 1.5, borderRadius: 2,
-                border: '1px solid rgba(79,195,247,0.18)',
-                bgcolor: 'rgba(12,22,48,0.35)',
-              }}
-            >
-              <Box
-                onClick={() => setExpandedPrinterId(expandedPrinterId === p._id ? null : p._id)}
-                sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }}
-              >
-                <PrintIcon sx={{ color: '#4fc3f7' }} />
-                <Typography sx={{ fontWeight: 800 }}>
-                  {p.printerName || p.sysName || p.host}
+<Stack spacing={1.5}>
+  {printers.map((p) => {
+    const latest = p.latest || {};
+    const low = !!latest.lowToner;
+    const online = isOnline(latest);
+
+    return (
+      <Box
+        key={p._id}
+        sx={{
+          p: 1.5, borderRadius: 2,
+          border: '1px solid rgba(79,195,247,0.18)',
+          bgcolor: 'rgba(12,22,48,0.35)',
+        }}
+      >
+        <Box
+          onClick={() => setExpandedPrinterId(expandedPrinterId === p._id ? null : p._id)}
+          sx={{ display:'flex', alignItems:'center', gap:1, cursor:'pointer' }}
+        >
+          <PrintIcon sx={{ color:'#4fc3f7' }} />
+          <Typography sx={{ fontWeight:800 }}>
+            {p.printerName || p.sysName || p.host}
+          </Typography>
+
+          <Chip
+            label={online ? 'Online' : 'Offline'}
+            size="small"
+            sx={{
+              ml: 1,
+              fontWeight: 700,
+              borderRadius: '10px',
+              ...(online
+                ? {
+                    color: '#00ffaa',
+                    border: '1px solid #00ffaa',
+                    bgcolor: 'rgba(0,255,170,0.10)',
+                    boxShadow: '0 0 10px rgba(0,255,170,0.35) inset',
+                  }
+                : {
+                    color: '#ff6b6b',
+                    border: '1px solid #ff6b6b',
+                    bgcolor: 'rgba(255,0,72,0.10)',
+                    boxShadow: '0 0 10px rgba(255,0,72,0.35) inset',
+                  })
+            }}
+          />
+
+          {low && (
+            <Tooltip title="Tóner bajo">
+              <WarningAmberIcon sx={{ color:'#ffb74d', ml:.5 }} />
+            </Tooltip>
+          )}
+
+          <Box sx={{ flex:1 }} />
+          <Typography sx={{ color:'#89cff0' }}>{p.host}</Typography>
+        </Box>
+
+        {expandedPrinterId === p._id && (
+          <>
+            <Divider sx={{ my: 1, borderColor:'rgba(79,195,247,0.2)' }} />
+            <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2 }}>
+              <Box>
+                <Typography sx={{ color:'#9fd8ff' }}>Serial</Typography>
+                <Typography sx={{ fontFamily:'monospace' }}>{p.serial || '—'}</Typography>
+
+                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Modelo</Typography>
+                <Typography sx={{ fontFamily:'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
+
+                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Última lectura</Typography>
+                <Typography sx={{ fontFamily:'monospace' }}>
+                  {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
                 </Typography>
-                <Chip
-                  label={online ? 'Online' : 'Offline'}
-                  size="small"
-                  sx={{ ml: 1, color: online ? '#9de6a2' : '#ff9e9e', border: '1px solid #2b4d74' }}
-                />
-                {low && (
-                  <Tooltip title="Tóner bajo">
-                    <WarningAmberIcon sx={{ color: '#ffb74d', ml: .5 }} />
-                  </Tooltip>
-                )}
-                <Box sx={{ flex: 1 }} />
-                <Typography sx={{ color: '#89cff0' }}>{p.host}</Typography>
+
+                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
+                <Typography sx={{ fontWeight:800 }}>{latest.lastPageCount ?? '—'}</Typography>
               </Box>
 
-              {expandedPrinterId === p._id && (
-                <>
-                  <Divider sx={{ my: 1, borderColor: 'rgba(79,195,247,0.2)' }} />
-                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                    <Box>
-                      <Typography sx={{ color: '#9fd8ff' }}>Serial</Typography>
-                      <Typography sx={{ fontFamily: 'monospace' }}>{p.serial || '—'}</Typography>
-
-                      <Typography sx={{ color: '#9fd8ff', mt: 1 }}>Modelo</Typography>
-                      <Typography sx={{ fontFamily: 'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
-
-                      <Typography sx={{ color: '#9fd8ff', mt: 1 }}>Última lectura</Typography>
-                      <Typography sx={{ fontFamily: 'monospace' }}>
-                        {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
-                      </Typography>
-
-                      <Typography sx={{ color: '#9fd8ff', mt: 1 }}>Contador de páginas</Typography>
-                      <Typography sx={{ fontWeight: 800 }}>{latest.lastPageCount ?? '—'}</Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography sx={{ color: '#9fd8ff', mb: 1 }}>Consumibles</Typography>
-                      <Stack spacing={1}>
-                        {(latest.lastSupplies || []).map((s, idx) => {
-                          const pct = tonerPercent(s.level, s.max);
-                          return (
-                            <Box key={idx}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                                <Typography>{s.name || `Supply ${idx + 1}`}</Typography>
-                                <Typography sx={{ color: pct <= 20 ? '#ff9e9e' : '#9de6a2' }}>
-                                  {isFinite(pct) ? `${pct}%` : '—'}
-                                </Typography>
-                              </Box>
-                              <LinearProgress
-                                variant="determinate"
-                                value={isFinite(pct) ? pct : 0}
-                                sx={{
-                                  height: 8,
-                                  borderRadius: 6,
-                                  bgcolor: 'rgba(255,255,255,0.08)',
-                                  '& .MuiLinearProgress-bar': {
-                                    transition: 'width .3s',
-                                  }
-                                }}
-                              />
-                            </Box>
-                          );
-                        })}
-                        {(!latest.lastSupplies || latest.lastSupplies.length === 0) && (
-                          <Typography sx={{ color: '#89cff0' }}>Sin datos de tóner.</Typography>
-                        )}
-                      </Stack>
-                    </Box>
-                  </Box>
-                </>
-              )}
+              <Box>
+                <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
+                <Stack spacing={1}>
+                  {(latest.lastSupplies || []).map((s, idx) => {
+                    const pct = tonerPercent(s.level, s.max);
+                    return (
+                      <Box key={idx}>
+                        <Box sx={{ display:'flex', justifyContent:'space-between' }}>
+                          <Typography>{s.name || `Supply ${idx+1}`}</Typography>
+                          <Typography sx={{ color: pct<=20 ? '#ff9e9e' : '#9de6a2' }}>
+                            {isFinite(pct) ? `${pct}%` : '—'}
+                          </Typography>
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={isFinite(pct) ? pct : 0}
+                          sx={{
+                            height: 8,
+                            borderRadius: 6,
+                            bgcolor: 'rgba(255,255,255,0.08)',
+                            '& .MuiLinearProgress-bar': { transition: 'width .3s' }
+                          }}
+                        />
+                      </Box>
+                    );
+                  })}
+                  {(!latest.lastSupplies || latest.lastSupplies.length === 0) && (
+                    <Typography sx={{ color:'#89cff0' }}>Sin datos de tóner.</Typography>
+                  )}
+                </Stack>
+              </Box>
             </Box>
-          );
-        })}
-      </Stack>
+          </>
+        )}
+      </Box>
+    );
+  })}
+</Stack>
     </CardContent>
   </Card>
 )}
