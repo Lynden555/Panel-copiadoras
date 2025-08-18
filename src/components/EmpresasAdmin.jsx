@@ -83,6 +83,24 @@ export default function EmpresasPanel() {
     downloadFile(`config_${empresaRecienCreada.nombre.replace(/\s+/g,'_')}.json`, JSON.stringify(cfg, null, 2));
   };
 
+  // ⏱️ Umbral de frescura: 2 minutos
+const STALE_MS = 2 * 60 * 1000;
+
+// Forzamos repintado cada 30s para que el chip cambie a Offline sin recargar datos.
+const [now, setNow] = useState(Date.now());
+useEffect(() => {
+  const t = setInterval(() => setNow(Date.now()), 30_000);
+  return () => clearInterval(t);
+}, []);
+
+// Calcula si está online: respeta latest.online===false y revisa antigüedad
+const isOnline = (latest, nowTs = Date.now()) => {
+  if (!latest?.lastSeenAt) return false;
+  if (latest.online === false) return false; // si el backend lo marca en false
+  const age = nowTs - new Date(latest.lastSeenAt).getTime();
+  return age <= STALE_MS;
+};
+
   // ====== utils de scope ======
   const getScope = () => ({
     empresaId: localStorage.getItem('empresaId') || '',
@@ -304,17 +322,6 @@ export default function EmpresasPanel() {
     return Math.max(0, Math.min(100, p));
   };
 
-  // Considera "offline" si no hay lecturas en los últimos 5 minutos.
-// Si cambiaste el envío del Agente a cada 2 min, 5 min va perfecto como colchón.
-const STALE_MS = 5 * 60 * 1000;
-
-const isOnline = (latest) => {
-  if (!latest?.lastSeenAt) return false;
-  const age = Date.now() - new Date(latest.lastSeenAt).getTime();
-  // Además respeta el flag latest.online si el backend lo marca en false
-  if (latest.online === false) return false;
-  return age <= STALE_MS;
-};
 
 
 
@@ -585,7 +592,7 @@ const isOnline = (latest) => {
   {printers.map((p) => {
     const latest = p.latest || {};
     const low = !!latest.lowToner;
-    const online = isOnline(latest);
+    const online = isOnline(latest, now);
 
     return (
       <Box
@@ -605,28 +612,28 @@ const isOnline = (latest) => {
             {p.printerName || p.sysName || p.host}
           </Typography>
 
-          <Chip
+            <Chip
             label={online ? 'Online' : 'Offline'}
             size="small"
             sx={{
-              ml: 1,
-              fontWeight: 700,
-              borderRadius: '10px',
-              ...(online
+                ml: 1,
+                fontWeight: 700,
+                borderRadius: '10px',
+                ...(online
                 ? {
                     color: '#00ffaa',
                     border: '1px solid #00ffaa',
                     bgcolor: 'rgba(0,255,170,0.10)',
                     boxShadow: '0 0 10px rgba(0,255,170,0.35) inset',
-                  }
+                    }
                 : {
                     color: '#ff6b6b',
                     border: '1px solid #ff6b6b',
                     bgcolor: 'rgba(255,0,72,0.10)',
                     boxShadow: '0 0 10px rgba(255,0,72,0.35) inset',
-                  })
+                    })
             }}
-          />
+            />
 
           {low && (
             <Tooltip title="Tóner bajo">
