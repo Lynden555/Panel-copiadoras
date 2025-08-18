@@ -83,14 +83,21 @@ export default function EmpresasPanel() {
     downloadFile(`config_${empresaRecienCreada.nombre.replace(/\s+/g,'_')}.json`, JSON.stringify(cfg, null, 2));
   };
 
-const STALE_MS = 2 * 60 * 1000; // 2 minutos
+// ⏱️ Umbral de frescura: 2 minutos
+const STALE_MS = 2 * 60 * 1000;
 
-const isOnline = (latest) => {
+// Forzamos repintado cada 30s para que el chip cambie a Offline sin recargar datos.
+const [now, setNow] = useState(Date.now());
+useEffect(() => {
+  const t = setInterval(() => setNow(Date.now()), 30_000);
+  return () => clearInterval(t);
+}, []);
+
+// Calcula si está online: respeta latest.online===false y revisa antigüedad
+const isOnline = (latest, nowTs = Date.now()) => {
   if (!latest?.lastSeenAt) return false;
-  if (latest.online === false) return false;
-
-  const now = Date.now(); // 👈 agregado
-  const age = now - new Date(latest.lastSeenAt).getTime();
+  if (latest.online === false) return false; // si el backend lo marca en false
+  const age = nowTs - new Date(latest.lastSeenAt).getTime();
   return age <= STALE_MS;
 };
 
