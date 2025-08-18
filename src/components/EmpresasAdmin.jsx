@@ -120,6 +120,26 @@ useEffect(() => {
   return () => clearInterval(t);
 }, []);
 
+
+const isReallyOnline = (latest, nowTs = Date.now()) => {
+  if (!latest) return false;
+
+  // 🚨 Señales fuertes de offline
+  if (!latest.serial) return false;
+  if (latest.lastPageCount == null) return false; // null o undefined
+
+  // 🚨 Si el backend explícitamente manda false
+  if (latest.online === false) return false;
+
+  // ⏱️ Si la última lectura ya es vieja (2 min)
+  if (!latest.lastSeenAt) return false;
+  const age = nowTs - new Date(latest.lastSeenAt).getTime();
+  if (age > 2 * 60 * 1000) return false;
+
+  // ✅ Si pasó todos los checks
+  return true;
+};
+
 // memoriza el último lastSeenAt por impresora para no “perder” el online entre refrescos
 const lastSeenRef = useRef(new Map());
 const applyAndRemember = (list) => {
@@ -626,7 +646,7 @@ const applyAndRemember = (list) => {
     const latest = p.latest || {};
     const low = !!latest.lowToner;
     const lastSeenAt = p._lastSeenAt || latest.lastSeenAt || null;
-    const online = isOnlineCalc(lastSeenAt, latest.online, now, loadingPrinters);
+    const online = isReallyOnline(latest, now);
 
     return (
       <Box
