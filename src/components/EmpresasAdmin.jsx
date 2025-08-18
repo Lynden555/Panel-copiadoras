@@ -83,12 +83,14 @@ export default function EmpresasPanel() {
     downloadFile(`config_${empresaRecienCreada.nombre.replace(/\s+/g,'_')}.json`, JSON.stringify(cfg, null, 2));
   };
 
-  // ⏱️ Umbral de frescura: 2 minutos
-const STALE_MS = 2 * 60 * 1000;
-const isOnline = (latest, nowTs = Date.now()) => {
+const STALE_MS = 2 * 60 * 1000; // 2 minutos
+
+const isOnline = (latest) => {
   if (!latest?.lastSeenAt) return false;
-  if (latest.online === false) return false; // lo que ahora manda el backend
-  const age = nowTs - new Date(latest.lastSeenAt).getTime();
+  if (latest.online === false) return false;
+
+  const now = Date.now(); // 👈 agregado
+  const age = now - new Date(latest.lastSeenAt).getTime();
   return age <= STALE_MS;
 };
 
