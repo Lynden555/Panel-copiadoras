@@ -1135,16 +1135,7 @@ sx={{
   {estadoFiltro !== 'Terminado' && estadoFiltro !== 'Cancelado' && estadoFiltro !== 'Reagendado' && (
     <>
       <Tooltip title="Terminar">
-        sx={{
-  background: 'rgba(79,195,247,.08)',
-  border: '1px solid rgba(79,195,247,.25)',
-  borderRadius: '12px',
-  transition: 'transform .15s ease, background .15s ease',
-  '&:hover': {
-    background: 'rgba(79,195,247,.16)',
-    transform: 'translateY(-1px)'
-  }
-}}
+
         <IconButton onClick={(e) => { e.stopPropagation(); handleTerminar(ticket._id, ticket.tipo); }}>
           <CheckIcon />
         </IconButton>
