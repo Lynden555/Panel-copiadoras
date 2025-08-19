@@ -1189,10 +1189,10 @@ sx={{
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          background: 'rgba(248, 255, 239, 0.78)',
+          background: 'rgba(255, 255, 255, 0.78)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
-          boxShadow: '0 10px 30px rgba(79,195,247,.10)'
+          boxShadow: '0 10px 30px rgba(169, 247, 79, 0.1)'
         }}
       >
               <h3
