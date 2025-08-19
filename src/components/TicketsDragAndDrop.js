@@ -1180,7 +1180,7 @@ sx={{
         ref={provided.innerRef}
         {...provided.droppableProps}
         style={{
-          border: '1px solid rgba(15,52,96,.12)',
+          border: '1px solid rgba(60, 255, 0, 0.12)',
           borderRadius: '16px',
           padding: '12px',
           boxSizing: 'border-box',
@@ -1189,7 +1189,7 @@ sx={{
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          background: 'rgba(255,255,255,.78)',
+          background: 'rgba(248, 255, 239, 0.78)',
           backdropFilter: 'blur(4px)',
           WebkitBackdropFilter: 'blur(4px)',
           boxShadow: '0 10px 30px rgba(79,195,247,.10)'
