@@ -864,21 +864,24 @@ useEffect(() => {
 
 
 <div
-    style={{
-      position: 'fixed',
-      top: 0,
-      left: 55, // para que no tape el sidebar
-      right: 0,
-      height: '55px',
-      background: 'linear-gradient(to right,#eeeeee,#eeeeee',
-      color: '#fff',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      padding: '0 80px',
-      zIndex: 1000,
-      boxShadow: '0 4px 8px rgba(0,0,0,0.1)'
-    }}
+style={{
+  position: 'fixed',
+  top: 0,
+  left: 55,
+  right: 0,
+  height: '64px',
+  background: 'rgba(255,255,255,.90)',
+  backdropFilter: 'blur(6px)',
+  WebkitBackdropFilter: 'blur(6px)',
+  borderBottom: '1px solid rgba(15,52,96,.12)',
+  color: '#0F3460',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  padding: '0 72px',
+  zIndex: 1000,
+  boxShadow: '0 8px 24px rgba(10,25,48,.08)'
+}}
   >
     
     
@@ -887,17 +890,16 @@ useEffect(() => {
         onClick={() => handleChangeTab(null, 'Pendiente')}
         style={{
           background: estadoFiltro === 'Pendiente' ? '#ffffff' : 'transparent',
-          color: estadoFiltro === 'Pendiente' ? '#4e4e4e' : '#292929',
-  border: 'none',
-  borderRadius: '20px',
-  padding: '10px 20px',
-  cursor: 'pointer',
-  fontWeight: 500, // más delgado
-  fontSize: '16px',
-  fontFamily: 'Inter, sans-serif',
-  letterSpacing: '0.3px'
-
-
+          color: estadoFiltro === 'Pendiente' ? '#0F3460' : '#292929',
+          border: estadoFiltro === 'Pendiente' ? '1px solid rgba(15,52,96,.18)' : '1px solid transparent',
+          borderRadius: '999px',
+          padding: '10px 18px',
+          cursor: 'pointer',
+          fontWeight: 600,
+          fontSize: '15px',
+          fontFamily: 'Inter, system-ui, sans-serif',
+          letterSpacing: '.3px',
+          boxShadow: estadoFiltro === 'Pendiente' ? '0 8px 20px rgba(10,25,48,.08)' : 'none'
         }}
       >
         Pendientes
@@ -905,54 +907,57 @@ useEffect(() => {
 
     <button
     onClick={() => handleChangeTab(null, 'Reagendado')}
-    style={{
-      background: estadoFiltro === 'Reagendado' ? '#ffffff' : 'transparent',
-      color: estadoFiltro === 'Reagendado' ? '#4e4e4e' : '#292929',
-      border: 'none',
-      borderRadius: '20px',
-      padding: '10px 20px',
-      cursor: 'pointer',
-      fontWeight: 500,
-      fontSize: '16px',
-      fontFamily: 'Inter, sans-serif',
-      letterSpacing: '0.3px'
-    }}
+style={{
+  background: estadoFiltro === 'Reagendado' ? '#ffffff' : 'transparent',
+  color: estadoFiltro === 'Reagendado' ? '#0F3460' : '#292929',
+  border: estadoFiltro === 'Reagendado' ? '1px solid rgba(15,52,96,.18)' : '1px solid transparent',
+  borderRadius: '999px',
+  padding: '10px 18px',
+  cursor: 'pointer',
+  fontWeight: 600,
+  fontSize: '15px',
+  fontFamily: 'Inter, system-ui, sans-serif',
+  letterSpacing: '.3px',
+  boxShadow: estadoFiltro === 'Reagendado' ? '0 8px 20px rgba(10,25,48,.08)' : 'none'
+}}
   >
     Reagendados
   </button>
       
       <button
         onClick={() => handleChangeTab(null, 'Terminado')}
-        style={{
-          background: estadoFiltro === 'Terminado' ? '#ffffff' : 'transparent',
-          color: estadoFiltro === 'Terminado' ? '#4e4e4e' : '#292929',
-  border: 'none',
-  borderRadius: '20px',
-  padding: '10px 20px',
-  cursor: 'pointer',
-  fontWeight: 500, // más delgado
-  fontSize: '16px',
-  fontFamily: 'Inter, sans-serif',
-  letterSpacing: '0.3px'
-        }}
+      style={{
+        background: estadoFiltro === 'Terminado' ? '#ffffff' : 'transparent',
+        color: estadoFiltro === 'Terminado' ? '#0F3460' : '#292929',
+        border: estadoFiltro === 'Terminado' ? '1px solid rgba(15,52,96,.18)' : '1px solid transparent',
+        borderRadius: '999px',
+        padding: '10px 18px',
+        cursor: 'pointer',
+        fontWeight: 600,
+        fontSize: '15px',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        letterSpacing: '.3px',
+        boxShadow: estadoFiltro === 'Terminado' ? '0 8px 20px rgba(10,25,48,.08)' : 'none'
+      }}
       >
         Terminados
       </button>
       
       <button
         onClick={() => handleChangeTab(null, 'Cancelado')}
-        style={{
-          background: estadoFiltro === 'Cancelado' ? '#ffffff' : 'transparent',
-          color: estadoFiltro === 'Cancelado' ? '#4e4e4e' : '#292929',
-  border: 'none',
-  borderRadius: '20px',
-  padding: '10px 20px',
-  cursor: 'pointer',
-  fontWeight: 500, // más delgado
-  fontSize: '16px',
-  fontFamily: 'Inter, sans-serif',
-  letterSpacing: '0.3px'
-        }}
+       style={{
+        background: estadoFiltro === 'Cancelado' ? '#ffffff' : 'transparent',
+        color: estadoFiltro === 'Cancelado' ? '#0F3460' : '#292929',
+        border: estadoFiltro === 'Cancelado' ? '1px solid rgba(15,52,96,.18)' : '1px solid transparent',
+        borderRadius: '999px',
+        padding: '10px 18px',
+        cursor: 'pointer',
+        fontWeight: 600,
+        fontSize: '15px',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        letterSpacing: '.3px',
+        boxShadow: estadoFiltro === 'Cancelado' ? '0 8px 20px rgba(10,25,48,.08)' : 'none'
+      }}
       >
         Cancelados
       </button>
@@ -965,12 +970,14 @@ useEffect(() => {
         value={busquedaTicket}
         onChange={(e) => setTicketSeleccionado(null) || setBusquedaTicket(e.target.value)}
         style={{
-          padding: '8px 14px',
-          borderRadius: '20px',
-          border: 'none',
+          padding: '10px 16px',
+          borderRadius: '999px',
+          border: '1px solid rgba(15,52,96,.15)',
           fontSize: '14px',
           outline: 'none',
-          width: '240px',
+          width: '260px',
+          background: '#fff',
+          boxShadow: '0 2px 10px rgba(15,52,96,.06)'
         }}
       />
 <span style={{ color: '#333', fontWeight: 'bold' }}>
@@ -997,16 +1004,19 @@ useEffect(() => {
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 style={{
-                  border: '2px solid #007bff',
-                  borderRadius: '5px',
-                  padding: '10px',
+                  border: '1px solid rgba(15,52,96,.12)',
+                  borderRadius: '16px',
+                  padding: '12px',
                   boxSizing: 'border-box',
                   width: '400px',
                   height: '600px',
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
-                  backgroundColor: '#f0f8ff',
+                  background: 'rgba(255,255,255,.75)',
+                  backdropFilter: 'blur(4px)',
+                  WebkitBackdropFilter: 'blur(4px)',
+                  boxShadow: '0 10px 30px rgba(10,25,48,.08)'
                 }}
               >
                 
@@ -1025,18 +1035,22 @@ useEffect(() => {
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           
-                          sx={{
-                            mb: 2,
-                            cursor: 'pointer',
-                            backgroundColor: getCardColor(ticket.tipo, ticket.estado),
-                            boxShadow: ticketSeleccionado === ticket._id ? '0 0 10px rgba(0, 123, 255, 0.7)' : '0 2px 6px rgba(0,0,0,0.1)',
-                            border: ticketSeleccionado === ticket._id ? '2px solid #007bff' : 'none',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                              transform: 'translateY(-4px)',
-                              boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-                            },
-                          }}
+sx={{
+  mb: 2,
+  cursor: 'pointer',
+  backgroundColor: '#ffffff',
+  border: '1px solid rgba(15,52,96,.10)',
+  borderLeft: ticket.tipo === 'toner' ? '5px solid #29B6F6' : '5px solid #FFD700',
+  boxShadow: ticketSeleccionado === ticket._id
+    ? '0 0 0 2px rgba(79,195,247,.45), 0 12px 28px rgba(10,25,48,.12)'
+    : '0 8px 20px rgba(10,25,48,.08)',
+  borderRadius: '16px',
+  transition: 'transform .22s ease, box-shadow .22s ease',
+  '&:hover': {
+    transform: 'translateY(-3px) scale(1.01)',
+    boxShadow: '0 14px 30px rgba(10,25,48,.14)',
+  },
+}}
                         >
 
                           
@@ -1121,6 +1135,16 @@ useEffect(() => {
   {estadoFiltro !== 'Terminado' && estadoFiltro !== 'Cancelado' && estadoFiltro !== 'Reagendado' && (
     <>
       <Tooltip title="Terminar">
+        sx={{
+  background: 'rgba(79,195,247,.08)',
+  border: '1px solid rgba(79,195,247,.25)',
+  borderRadius: '12px',
+  transition: 'transform .15s ease, background .15s ease',
+  '&:hover': {
+    background: 'rgba(79,195,247,.16)',
+    transform: 'translateY(-1px)'
+  }
+}}
         <IconButton onClick={(e) => { e.stopPropagation(); handleTerminar(ticket._id, ticket.tipo); }}>
           <CheckIcon />
         </IconButton>
@@ -1165,27 +1189,32 @@ useEffect(() => {
         ref={provided.innerRef}
         {...provided.droppableProps}
         style={{
-          border: '2px solid #28a745',
-          borderRadius: '5px',
-          padding: '10px',
+          border: '1px solid rgba(15,52,96,.12)',
+          borderRadius: '16px',
+          padding: '12px',
           boxSizing: 'border-box',
           width: '250px',
           height: '600px',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: '#e6ffed',
+          background: 'rgba(255,255,255,.78)',
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          boxShadow: '0 10px 30px rgba(79,195,247,.10)'
         }}
       >
               <h3
-        style={{
-          flexShrink: 0,
-          textAlign: 'center',      // 📌 Centrar texto
-          fontSize: '1.4rem',        // 📌 Aumentar tamaño (puedes subir a 1.6rem o más)
-          fontWeight: 'bold',        
-          marginBottom: '10px',      // 📌 Espacio bajo el nombre
-          color: '#333'              
-        }}
+            style={{
+              flexShrink: 0,
+              textAlign: 'center',
+              fontSize: '1.1rem',
+              fontWeight: 800,
+              marginBottom: '10px',
+              color: '#0F3460',
+              letterSpacing: '.4px',
+              textShadow: '0 0 18px rgba(79,195,247,.25)'
+            }}
       >
 
         {tecnico.nombre} ({ticketsPorTecnico(tecnico.nombre).length})
@@ -1215,8 +1244,8 @@ useEffect(() => {
               height: '100px',
               borderRadius: '50%',
               objectFit: 'cover',
-              border: '2px solid #4fc3f7',
-              boxShadow: '0 0 10px rgba(79, 195, 247, 0.5)',
+              border: '2px solid #4FC3F7',
+              boxShadow: '0 0 0 3px rgba(79,195,247,.15), 0 0 22px rgba(79,195,247,.28)',
               transition: 'transform 0.3s, box-shadow 0.3s',
             }}
             onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
@@ -1243,19 +1272,22 @@ useEffect(() => {
         ref={provided.innerRef}
         {...provided.draggableProps}
         {...provided.dragHandleProps}
-        sx={{
-          mb: 2,
-          cursor: 'pointer',
-          backgroundColor: ticket.tipo === 'toner' ? '#ffebee' : '#fff8e1',
-          borderLeft: ticket.tipo === 'toner' ? '5px solid #e53935' : 'none',
-          boxShadow: ticketSeleccionado === ticket._id ? '0 0 10px rgba(0, 123, 255, 0.7)' : '0 2px 6px rgba(0,0,0,0.1)',
-          border: ticketSeleccionado === ticket._id ? '2px solid #007bff' : 'none',
-          transition: 'all 0.3s ease',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 8px 16px rgba(0,0,0,0.15)',
-          },
-        }}
+sx={{
+  mb: 2,
+  cursor: 'pointer',
+  backgroundColor: '#ffffff',
+  border: '1px solid rgba(15,52,96,.10)',
+  borderLeft: ticket.tipo === 'toner' ? '5px solid #29B6F6' : '5px solid #FFD700',
+  boxShadow: ticketSeleccionado === ticket._id
+    ? '0 0 0 2px rgba(79,195,247,.45), 0 12px 28px rgba(10,25,48,.12)'
+    : '0 8px 20px rgba(10,25,48,.08)',
+  borderRadius: '16px',
+  transition: 'transform .22s ease, box-shadow .22s ease',
+  '&:hover': {
+    transform: 'translateY(-3px) scale(1.01)',
+    boxShadow: '0 14px 30px rgba(10,25,48,.14)',
+  },
+}}
       >
         <CardContent>
           <Typography variant="subtitle1" gutterBottom>
