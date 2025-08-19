@@ -651,7 +651,7 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
   {printers.map((p) => {
     const latest = p.latest || {};
     const low = !!latest.lowToner;
-    const online = isOnlineUI(p, now);
+    const online  = (typeof p.online === 'boolean') ? p.online : (latest.derivedOnline ?? (latest.online !== false));
     return (
       <Box
         key={p._id}
