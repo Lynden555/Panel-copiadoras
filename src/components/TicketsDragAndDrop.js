@@ -1010,7 +1010,7 @@ style={{
                   boxSizing: 'border-box',
                   width: '400px',
                   height: '600px',
-                  overflow: 'hidden',
+                  overflow: 'visible',
                   display: 'flex',
                   flexDirection: 'column',
                   // Fondo limpio con “scanline” sutil
@@ -1235,7 +1235,7 @@ style={{
           boxSizing: 'border-box',
           width: '250px',
           height: '600px',
-          overflow: 'hidden',
+          overflow: 'visible',
           display: 'flex',
           flexDirection: 'column',
           background: `
@@ -1337,7 +1337,7 @@ style={{
               : '0 10px 26px rgba(10,25,48,.10)',
           transition: 'transform .22s ease, box-shadow .22s ease, filter .22s ease',
           '&:hover': {
-            transform: 'translateY(-3px) scale(1.01)',
+            transform: none,
             boxShadow: '0 16px 34px rgba(10,25,48,.16)',
             filter: 'brightness(1.02)'
           },
