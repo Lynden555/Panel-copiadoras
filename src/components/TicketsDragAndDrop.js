@@ -21,6 +21,7 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import EventRepeatIcon from '@mui/icons-material/EventRepeat';
 import UserMenu from './UserMenu'; 
 import { Howl } from 'howler';
+import Portal from './Portal';
 
 
 // 🗓️ Rango día / semana (Lun–Sáb con corte sáb 14:00) / mes
@@ -1313,8 +1314,9 @@ style={{
 
 
 {ticketsPorTecnico(tecnico.nombre).map((ticket, index) => (
-  <Draggable key={ticket._id} draggableId={ticket._id} index={index}>
-    {(provided) => (
+<Draggable key={ticket._id} draggableId={ticket._id} index={index}>
+  {(provided, snapshot) => {
+    const card = (
       <Card
         ref={provided.innerRef}
         {...provided.draggableProps}
@@ -1447,9 +1449,10 @@ style={{
   </Tooltip>
 </CardActions>
       </Card>
-    )}
+    );
     return snapshot.isDragging ? <Portal>{card}</Portal> : card;
-  </Draggable>
+  }}
+</Draggable>
 ))}
 
                     {provided.placeholder}
