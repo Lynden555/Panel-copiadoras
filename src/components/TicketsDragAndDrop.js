@@ -1038,8 +1038,9 @@ style={{
                   }}
                 >
                   {ticketsFiltrados.map((ticket, index) => (
-                    <Draggable key={ticket._id} draggableId={ticket._id} index={index}>
-                      {(provided) => (
+                  <Draggable key={ticket._id} draggableId={ticket._id} index={index}>
+                    {(provided, snapshot) => {
+                      const card = (
                         <Card
                           ref={provided.innerRef}
                           {...provided.draggableProps}
@@ -1208,20 +1209,26 @@ style={{
         <IconButton onClick={(e) => { e.stopPropagation(); handleCancelar(ticket._id, ticket.tipo); }}>
           <DeleteIcon />
         </IconButton>
-      </Tooltip>
-    </>
-  )}
-</CardActions>
+          </Tooltip>
+        </>
+      )}
+                  </CardActions>
 
                         </Card>
-                      )}
-                    </Draggable>
+                      );
+
+                      // 👉 Teletransporta mientras se arrastra:
+                      return snapshot.isDragging ? <Portal>{card}</Portal> : card;
+                    }}
+                  </Draggable>
                   ))}
                   {provided.placeholder}
                 </div>
               </div>
             )}
           </Droppable>
+
+
 
 {tecnicos.map(tecnico => (
 <Droppable key={tecnico._id} droppableId={tecnico._id}>
