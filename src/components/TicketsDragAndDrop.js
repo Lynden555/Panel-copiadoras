@@ -998,13 +998,13 @@ style={{
 
       <DragDropContext onDragEnd={onDragEnd}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', padding: '20px', marginTop: '70px' }}>
-          <Droppable droppableId="tickets">
-            {(provided) => (
+        <Droppable droppableId="tickets">
+          {(provided, snapshot) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 style={{
-                  border: '1px solid rgba(15,52,96,.12)',
+                  border: '1px solid rgba(79,195,247,.35)',
                   borderRadius: '16px',
                   padding: '12px',
                   boxSizing: 'border-box',
@@ -1013,10 +1013,19 @@ style={{
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
-                  background: 'rgba(255,255,255,.75)',
+                  // Fondo limpio con “scanline” sutil
+                  background: `
+                    linear-gradient(180deg, rgba(255,255,255,.95), rgba(255,255,255,.88)),
+                    repeating-linear-gradient(0deg, rgba(79,195,247,.055) 0px, rgba(79,195,247,.055) 1px, transparent 2px, transparent 4px)
+                  `,
                   backdropFilter: 'blur(4px)',
                   WebkitBackdropFilter: 'blur(4px)',
-                  boxShadow: '0 10px 30px rgba(10,25,48,.08)'
+                  // Glow neón (más fuerte si está en drag-over)
+                  boxShadow: snapshot.isDraggingOver
+                    ? '0 0 0 2px rgba(79,195,247,.55), 0 0 22px rgba(79,195,247,.45), 0 0 48px rgba(79,195,247,.35)'
+                    : '0 0 0 1px rgba(79,195,247,.28) inset, 0 0 14px rgba(79,195,247,.28), 0 8px 26px rgba(10,25,48,.12)',
+                  transition: 'box-shadow .2s ease, transform .2s ease',
+                  transform: snapshot.isDraggingOver ? 'translateY(-2px)' : 'none'
                 }}
               >
                 
@@ -1174,26 +1183,33 @@ sx={{
           </Droppable>
 
 {tecnicos.map(tecnico => (
-  <Droppable key={tecnico._id} droppableId={tecnico._id}>
-    {(provided) => (
+<Droppable key={tecnico._id} droppableId={tecnico._id}>
+  {(provided, snapshot) => (
       <div
         ref={provided.innerRef}
         {...provided.droppableProps}
-                style={{
-                  border: '1px solid rgba(15,52,96,.12)',
-                  borderRadius: '16px',
-                  padding: '12px',
-                  boxSizing: 'border-box',
-                  width: '400px',
-                  height: '600px',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  background: 'rgba(255,255,255,.75)',
-                  backdropFilter: 'blur(4px)',
-                  WebkitBackdropFilter: 'blur(4px)',
-                  boxShadow: '0 10px 30px rgba(10,25,48,.08)'
-                }}
+        style={{
+          border: '1px solid rgba(46,229,157,.35)', // verde neón
+          borderRadius: '16px',
+          padding: '12px',
+          boxSizing: 'border-box',
+          width: '250px',
+          height: '600px',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          background: `
+            linear-gradient(180deg, rgba(255,255,255,.94), rgba(255,255,255,.86)),
+            repeating-linear-gradient(0deg, rgba(46,229,157,.05) 0px, rgba(46,229,157,.05) 1px, transparent 2px, transparent 4px)
+          `,
+          backdropFilter: 'blur(4px)',
+          WebkitBackdropFilter: 'blur(4px)',
+          boxShadow: snapshot.isDraggingOver
+            ? '0 0 0 2px rgba(46,229,157,.55), 0 0 22px rgba(46,229,157,.45), 0 0 48px rgba(46,229,157,.32)'
+            : '0 0 0 1px rgba(46,229,157,.26) inset, 0 0 14px rgba(46,229,157,.24), 0 8px 26px rgba(10,25,48,.10)',
+          transition: 'box-shadow .2s ease, transform .2s ease',
+          transform: snapshot.isDraggingOver ? 'translateY(-2px)' : 'none'
+        }}
       >
               <h3
             style={{
