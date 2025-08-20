@@ -63,36 +63,47 @@ function Sidebar({ children }) {
           50%     { transform: translateY(20px);  opacity:.25; }
         }
       `}</style>
+      
+      <style>{`
+        html, body, #root { height: 100%; min-height: 100vh; }
+      `}</style>
 
-      <Drawer
-        variant="permanent"
-        PaperProps={{
-          sx: {
-            width: 60,
-            overflow: 'visible',
-            background: 'linear-gradient(180deg, #7C1BEA 0%, #6B16CE 60%, #5A12B2 100%)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            px: 0,
-            // ribete/luz lateral
-            position: 'relative',
-            borderRight: '1px solid rgba(255,255,255,.14)',
-            boxShadow: '0 10px 30px rgba(67,0,152,.35), inset 0 0 22px rgba(255,255,255,.06)',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              left: 0, top: 0,
-              width: '3px',
-              height: '100%',
-              background: 'linear-gradient(180deg, rgba(174,93,241,.95), rgba(174,93,241,0))',
-              boxShadow: '0 0 16px rgba(174,93,241,.55)'
-            },
-            '& .MuiList-root': { width: '100%' }
-          },
-        }}
-      >
+          <Drawer
+            variant="permanent"
+            PaperProps={{
+              sx: {
+                width: 70,              // 🔧 el ancho que tú quieras (ej. 90)
+                position: 'fixed',      // ✅ se ancla a la ventana
+                top: 0,
+                left: 0,
+                bottom: 0,
+                height: '100vh',        // ✅ llega hasta abajo SIEMPRE
+                flexShrink: 0,          // ✅ no se encoja en layouts flex
+                borderRadius: 0,        // ✅ sin esquinas redondeadas abajo
+                overflow: 'visible',
+
+                // …tus estilos que ya tienes (gradiente, sombras, ::before, etc)…
+                background: 'linear-gradient(180deg, #7C1BEA 0%, #6B16CE 60%, #5A12B2 100%)',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 0,
+                borderRight: '1px solid rgba(255,255,255,.14)',
+                boxShadow: '0 10px 30px rgba(67,0,152,.35), inset 0 0 22px rgba(255,255,255,.06)',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  left: 0, top: 0,
+                  width: '3px',
+                  height: '100%',
+                  background: 'linear-gradient(180deg, rgba(174,93,241,.95), rgba(174,93,241,0))',
+                  boxShadow: '0 0 16px rgba(174,93,241,.55)'
+                },
+                '& .MuiList-root': { width: '100%' }
+              },
+            }}
+          >
         {/* shimmer superior sutil */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 80,
