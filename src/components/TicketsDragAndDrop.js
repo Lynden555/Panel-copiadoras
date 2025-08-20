@@ -1044,22 +1044,62 @@ style={{
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           
-sx={{
-  mb: 2,
-  cursor: 'pointer',
-  backgroundColor: '#ffffff',
-  border: '1px solid rgba(15,52,96,.10)',
-  borderLeft: ticket.tipo === 'toner' ? '5px solid #29B6F6' : '5px solid #FFD700',
-  boxShadow: ticketSeleccionado === ticket._id
-    ? '0 0 0 2px rgba(79,195,247,.45), 0 12px 28px rgba(10,25,48,.12)'
-    : '0 8px 20px rgba(10,25,48,.08)',
-  borderRadius: '16px',
-  transition: 'transform .22s ease, box-shadow .22s ease',
-  '&:hover': {
-    transform: 'translateY(-3px) scale(1.01)',
-    boxShadow: '0 14px 30px rgba(10,25,48,.14)',
-  },
-}}
+                  sx={{
+                    mb: 2,
+                    cursor: 'pointer',
+                    position: 'relative',
+                    overflow: 'visible',
+                    background: `
+                      linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,.96)),
+                      radial-gradient(1200px 1200px at -10% -10%, rgba(79,195,247,.06), transparent 40%)
+                    `,
+                    border: '1px solid rgba(15,52,96,.12)',
+                    borderRadius: '16px',
+                    // Glow base + seleccionado
+                    boxShadow:
+                      ticketSeleccionado === ticket._id
+                        ? '0 0 0 2px rgba(79,195,247,.45), 0 16px 36px rgba(10,25,48,.20)'
+                        : '0 10px 26px rgba(10,25,48,.10)',
+                    transition: 'transform .22s ease, box-shadow .22s ease, filter .22s ease',
+                    '&:hover': {
+                      transform: 'translateY(-3px) scale(1.01)',
+                      boxShadow: '0 16px 34px rgba(10,25,48,.16)',
+                      filter: 'brightness(1.02)'
+                    },
+                    zIndex: snapshot.isDragging ? 9999 : 'auto',
+                    transform: snapshot.isDragging ? 'scale(1.015)' : undefined,
+                    boxShadow: snapshot.isDragging
+                      ? '0 0 0 2px rgba(79,195,247,.55), 0 22px 44px rgba(10,25,48,.22)'
+                      : (ticketSeleccionado === ticket._id
+                          ? '0 0 0 2px rgba(79,195,247,.45), 0 16px 36px rgba(10,25,48,.20)'
+                          : '0 10px 26px rgba(10,25,48,.10)'),
+                    // Franja lateral cyber (cambia según tipo)
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: -1, top: -1, bottom: -1,
+                      width: '6px',
+                      borderTopLeftRadius: '16px',
+                      borderBottomLeftRadius: '16px',
+                      background: ticket.tipo === 'toner'
+                        ? 'linear-gradient(180deg, #6FD3FF, #29B6F6)'
+                        : 'linear-gradient(180deg, #FFE07A, #FFD700)',
+                      boxShadow: ticket.tipo === 'toner'
+                        ? '0 0 14px rgba(41,182,246,.65), 0 0 28px rgba(41,182,246,.35)'
+                        : '0 0 14px rgba(255,215,0,.65), 0 0 28px rgba(255,215,0,.35)'
+                    },
+                    // Esquinas/ornamentos sutiles (cyber vibes)
+                    '&::after': {
+                      content: '""',
+                      position: 'absolute',
+                      right: 10, top: 10,
+                      width: 10, height: 10,
+                      borderTop: '2px solid rgba(79,195,247,.5)',
+                      borderRight: '2px solid rgba(79,195,247,.5)',
+                      borderTopRightRadius: '6px',
+                      filter: 'drop-shadow(0 0 4px rgba(79,195,247,.45))'
+                    },
+                  }}
                         >
 
                           
@@ -1279,22 +1319,61 @@ sx={{
         ref={provided.innerRef}
         {...provided.draggableProps}
         {...provided.dragHandleProps}
-sx={{
-  mb: 2,
-  cursor: 'pointer',
-  backgroundColor: '#ffffff',
-  border: '1px solid rgba(15,52,96,.10)',
-  borderLeft: ticket.tipo === 'toner' ? '5px solid #29B6F6' : '5px solid #FFD700',
-  boxShadow: ticketSeleccionado === ticket._id
-    ? '0 0 0 2px rgba(79,195,247,.45), 0 12px 28px rgba(10,25,48,.12)'
-    : '0 8px 20px rgba(10,25,48,.08)',
-  borderRadius: '16px',
-  transition: 'transform .22s ease, box-shadow .22s ease',
-  '&:hover': {
-    transform: 'translateY(-3px) scale(1.01)',
-    boxShadow: '0 14px 30px rgba(10,25,48,.14)',
-  },
-}}
+        
+        sx={{
+          mb: 2,
+          cursor: 'pointer',
+          position: 'relative',
+          overflow: 'visible',
+          background: `
+            linear-gradient(180deg, rgba(255,255,255,1), rgba(255,255,255,.96)),
+            radial-gradient(1200px 1200px at 110% -10%, rgba(46,229,157,.06), transparent 40%)
+          `,
+          border: '1px solid rgba(15,52,96,.12)',
+          borderRadius: '16px',
+          boxShadow:
+            ticketSeleccionado === ticket._id
+              ? '0 0 0 2px rgba(46,229,157,.45), 0 16px 36px rgba(10,25,48,.20)'
+              : '0 10px 26px rgba(10,25,48,.10)',
+          transition: 'transform .22s ease, box-shadow .22s ease, filter .22s ease',
+          '&:hover': {
+            transform: 'translateY(-3px) scale(1.01)',
+            boxShadow: '0 16px 34px rgba(10,25,48,.16)',
+            filter: 'brightness(1.02)'
+          },
+          zIndex: snapshot.isDragging ? 9999 : 'auto',
+          transform: snapshot.isDragging ? 'scale(1.015)' : undefined,
+          boxShadow: snapshot.isDragging
+            ? '0 0 0 2px rgba(46,229,157,.55), 0 22px 44px rgba(10,25,48,.22)'
+            : (ticketSeleccionado === ticket._id
+                ? '0 0 0 2px rgba(46,229,157,.45), 0 16px 36px rgba(10,25,48,.20)'
+                : '0 10px 26px rgba(10,25,48,.10)'),
+          // Franja lateral cyber (azul si tóner, verde si normal para diferenciar dentro del técnico)
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            left: -1, top: -1, bottom: -1,
+            width: '6px',
+            borderTopLeftRadius: '16px',
+            borderBottomLeftRadius: '16px',
+            background: ticket.tipo === 'toner'
+              ? 'linear-gradient(180deg, #6FD3FF, #29B6F6)'
+              : 'linear-gradient(180deg, #4BE3A0, #2EE59D)',
+            boxShadow: ticket.tipo === 'toner'
+              ? '0 0 14px rgba(41,182,246,.65), 0 0 28px rgba(41,182,246,.35)'
+              : '0 0 14px rgba(46,229,157,.65), 0 0 28px rgba(46,229,157,.35)'
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            right: 10, bottom: 10,
+            width: 10, height: 10,
+            borderBottom: '2px solid rgba(46,229,157,.5)',
+            borderRight: '2px solid rgba(46,229,157,.5)',
+            borderBottomRightRadius: '6px',
+            filter: 'drop-shadow(0 0 4px rgba(46,229,157,.45))'
+          },
+        }}
       >
         <CardContent>
           <Typography variant="subtitle1" gutterBottom>
