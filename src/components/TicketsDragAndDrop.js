@@ -1179,21 +1179,21 @@ sx={{
       <div
         ref={provided.innerRef}
         {...provided.droppableProps}
-        style={{
-          border: '1px solid rgba(60, 255, 0, 0.12)',
-          borderRadius: '16px',
-          padding: '12px',
-          boxSizing: 'border-box',
-          width: '250px',
-          height: '600px',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          background: 'rgba(255, 255, 255, 0.78)',
-          backdropFilter: 'blur(4px)',
-          WebkitBackdropFilter: 'blur(4px)',
-          boxShadow: '0 10px 30px rgba(169, 247, 79, 0.1)'
-        }}
+                style={{
+                  border: '1px solid rgba(15,52,96,.12)',
+                  borderRadius: '16px',
+                  padding: '12px',
+                  boxSizing: 'border-box',
+                  width: '400px',
+                  height: '600px',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  background: 'rgba(255,255,255,.75)',
+                  backdropFilter: 'blur(4px)',
+                  WebkitBackdropFilter: 'blur(4px)',
+                  boxShadow: '0 10px 30px rgba(10,25,48,.08)'
+                }}
       >
               <h3
             style={{

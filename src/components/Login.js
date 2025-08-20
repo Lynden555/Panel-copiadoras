@@ -89,6 +89,7 @@ function Login({ onLogin }) {
             <MenuItem value="" disabled>Selecciona la empresa</MenuItem>
             <MenuItem value="empresa123">Empresa A</MenuItem>
             <MenuItem value="empresa456">Empresa B</MenuItem>
+            <MenuItem value="grapelabs">Grape Labs</MenuItem>
           </Select>
 
             <TextField
