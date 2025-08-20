@@ -68,7 +68,7 @@ function Sidebar({ children }) {
         variant="permanent"
         PaperProps={{
           sx: {
-            width: 55,
+            width: 90,
             overflow: 'visible',
             background: 'linear-gradient(180deg, #7C1BEA 0%, #6B16CE 60%, #5A12B2 100%)',
             color: '#fff',
@@ -176,7 +176,7 @@ function Sidebar({ children }) {
                     {/* espacio para icono Agregar Técnico */}
                     <ListItemIcon sx={{ minWidth: 0 }}>
                       <img
-                        src="/tecnico.png"
+                        src="/tec.png"
                         alt="Agregar Técnico"
                         style={{
                           width: 26,
