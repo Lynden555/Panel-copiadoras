@@ -1062,7 +1062,7 @@ style={{
                         : '0 10px 26px rgba(10,25,48,.10)',
                     transition: 'transform .22s ease, box-shadow .22s ease, filter .22s ease',
                     '&:hover': {
-                      transform: 'none',
+                      transform: 'translateY(-3px) scale(1.01)',
                       boxShadow: '0 16px 34px rgba(10,25,48,.16)',
                       filter: 'brightness(1.02)'
                     },
@@ -1085,8 +1085,8 @@ style={{
                         ? 'linear-gradient(180deg, #6FD3FF, #29B6F6)'
                         : 'linear-gradient(180deg, #FFE07A, #FFD700)',
                       boxShadow: ticket.tipo === 'toner'
-                        ? '0 0 14px rgba(41,182,246,.65), 0 0 28px rgba(41,182,246,.35)'
-                        : '0 0 14px rgba(255,215,0,.65), 0 0 28px rgba(255,215,0,.35)'
+                        ? '0 0 8px rgba(41,182,246,.65), 0 0 16px rgba(41,182,246,.35)'
+                        : '0 0 8px rgba(255,215,0,.65), 0 0 16px rgba(255,215,0,.35)'
                     },
                     // Esquinas/ornamentos sutiles (cyber vibes)
                     '&::after': {
@@ -1337,7 +1337,7 @@ style={{
               : '0 10px 26px rgba(10,25,48,.10)',
           transition: 'transform .22s ease, box-shadow .22s ease, filter .22s ease',
           '&:hover': {
-            transform: 'none',
+            transform: 'translateY(-3px) scale(1.01)',
             boxShadow: '0 16px 34px rgba(10,25,48,.16)',
             filter: 'brightness(1.02)'
           },
@@ -1360,8 +1360,8 @@ style={{
               ? 'linear-gradient(180deg, #6FD3FF, #29B6F6)'
               : 'linear-gradient(180deg, #4BE3A0, #2EE59D)',
             boxShadow: ticket.tipo === 'toner'
-              ? '0 0 14px rgba(41,182,246,.65), 0 0 28px rgba(41,182,246,.35)'
-              : '0 0 14px rgba(46,229,157,.65), 0 0 28px rgba(46,229,157,.35)'
+              ? '0 0 8px rgba(41,182,246,.65), 0 0 16px rgba(41,182,246,.35)'
+              : '0 0 8px rgba(46,229,157,.65), 0 0 16px rgba(46,229,157,.35)'
           },
           '&::after': {
             content: '""',
