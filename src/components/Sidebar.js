@@ -68,7 +68,7 @@ function Sidebar({ children }) {
         variant="permanent"
         PaperProps={{
           sx: {
-            width: 90,
+            width: 60,
             overflow: 'visible',
             background: 'linear-gradient(180deg, #7C1BEA 0%, #6B16CE 60%, #5A12B2 100%)',
             color: '#fff',
@@ -157,9 +157,17 @@ function Sidebar({ children }) {
           <Tooltip title="Técnicos" placement="right" arrow componentsProps={{ tooltip: { sx: { fontSize: 14 } } }}>
             <ListItem disablePadding sx={{ justifyContent: 'center' }}>
               <ListItemButton onClick={toggleTecnicos} sx={neonBtn(tecnicosOpen)}>
-                <ListItemIcon sx={{ minWidth: 0 }}>
-                  <PeopleIcon sx={iconGlow(tecnicosOpen)} />
-                </ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: 0 }}>
+                      <img
+                        src="/tec.png"
+                        alt="Agregar Técnico"
+                        style={{
+                          width: 26,
+                          height: 26,
+                          filter: isActive('/agregar-tecnico') ? 'drop-shadow(0 0 6px #AE5DF1)' : 'drop-shadow(0 0 0 transparent)',
+                        }}
+                      />
+                    </ListItemIcon>
               </ListItemButton>
             </ListItem>
           </Tooltip>
@@ -175,15 +183,7 @@ function Sidebar({ children }) {
                   >
                     {/* espacio para icono Agregar Técnico */}
                     <ListItemIcon sx={{ minWidth: 0 }}>
-                      <img
-                        src="/tec.png"
-                        alt="Agregar Técnico"
-                        style={{
-                          width: 26,
-                          height: 26,
-                          filter: isActive('/agregar-tecnico') ? 'drop-shadow(0 0 6px #AE5DF1)' : 'drop-shadow(0 0 0 transparent)',
-                        }}
-                      />
+                      <PersonAddIcon sx={iconGlow(isActive('/agregar-tecnico'))} />
                     </ListItemIcon>
                   </ListItemButton>
                 </ListItem>
@@ -221,7 +221,7 @@ function Sidebar({ children }) {
         </List>
       </Drawer>
 
-      <main style={{ flexGrow: 1, padding: '20px', marginLeft: '70px' }}>
+      <main style={{ flexGrow: 1, padding: '20px', marginLeft: '100px' }}>
         {children}
       </main>
     </div>
