@@ -720,7 +720,27 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
                 </Typography>
 
                 <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
-                <Typography sx={{ fontWeight:800 }}>{latest.lastPageCount ?? '—'}</Typography>
+                <Typography sx={{ fontWeight:800 }}>
+                  {latest.lastPageCount ?? '—'}
+                </Typography>
+
+                {latest.lastPageMono != null && (
+                  <>
+                    <Typography sx={{ color:'#9fd8ff', mt:1 }}>Páginas B/N</Typography>
+                    <Typography sx={{ fontFamily:'monospace' }}>
+                      {latest.lastPageMono ?? '—'}
+                    </Typography>
+                  </>
+                )}
+
+                {latest.lastPageColor != null && (
+                  <>
+                    <Typography sx={{ color:'#9fd8ff', mt:1 }}>Páginas Color</Typography>
+                    <Typography sx={{ fontFamily:'monospace' }}>
+                      {latest.lastPageColor ?? '—'}
+                    </Typography>
+                  </>
+                )}
               </Box>
 
               <Box>
