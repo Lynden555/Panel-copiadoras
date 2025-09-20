@@ -703,28 +703,37 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
           <Typography sx={{ color:'#89cff0' }}>{p.host}</Typography>
         </Box>
 
-        {expandedPrinterId === p._id && (
-          <>
-            <Divider sx={{ my: 1, borderColor:'rgba(79,195,247,0.2)' }} />
-            <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2 }}>
-              <Box>
-                <Typography sx={{ color:'#9fd8ff' }}>Serial</Typography>
-                <Typography sx={{ fontFamily:'monospace' }}>{p.serial || '—'}</Typography>
+{expandedPrinterId === p._id && (() => {
+  const latest = p.latest || {};
+  return (
+    <>
+      <Divider sx={{ my: 1, borderColor:'rgba(79,195,247,0.2)' }} />
+      <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2 }}>
+        <Box>
+          <Typography sx={{ color:'#9fd8ff' }}>Serial</Typography>
+          <Typography sx={{ fontFamily:'monospace' }}>{p.serial || '—'}</Typography>
 
-                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Modelo</Typography>
-                <Typography sx={{ fontFamily:'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
+          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Modelo</Typography>
+          <Typography sx={{ fontFamily:'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
 
-                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Última lectura</Typography>
-                <Typography sx={{ fontFamily:'monospace' }}>
-                  {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
-                </Typography>
+          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Última lectura</Typography>
+          <Typography sx={{ fontFamily:'monospace' }}>
+            {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
+          </Typography>
 
-                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
-                <Typography sx={{ fontWeight:800 }}>{latest.lastPageCount ?? '—'}</Typography>
+          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
+          <Typography sx={{ fontWeight:800 }}>{latest.lastPageCount ?? '—'}</Typography>
 
-                <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador B/N</Typography>
-                <Typography sx={{ fontWeight:800 }}>{latest.lastPageMono ?? '—'}</Typography>
-              </Box>
+          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador B/N</Typography>
+          <Typography sx={{ fontWeight:800 }}>{latest.lastPageMono ?? '—'}</Typography>
+
+          {latest.lastPageColor != null && latest.lastPageColor > 0 && (
+            <>
+              <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador Color</Typography>
+              <Typography sx={{ fontWeight:800 }}>{latest.lastPageColor}</Typography>
+            </>
+          )}
+        </Box>
 
               <Box>
                 <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
@@ -759,7 +768,8 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
               </Box>
             </Box>
           </>
-        )}
+        );
+      })()}
       </Box>
     );
   })}
