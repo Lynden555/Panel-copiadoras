@@ -727,8 +727,6 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
           <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador B/N</Typography>
           <Typography sx={{ fontWeight:800 }}>{latest.lastPageMono ?? '—'}</Typography>
 
-          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador Color</Typography>
-          <Typography sx={{ fontWeight:800 }}>{latest.lastPageColor ?? '—'}</Typography>
 
           {latest.lastPageColor != null && latest.lastPageColor > 0 && (
             <>
