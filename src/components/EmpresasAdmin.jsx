@@ -774,7 +774,7 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
       </Box>
     );
   })}
-</Stack>
+ </Stack>
     </CardContent>
   </Card>
 )}
