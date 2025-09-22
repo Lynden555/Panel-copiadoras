@@ -703,78 +703,75 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
           <Typography sx={{ color:'#89cff0' }}>{p.host}</Typography>
         </Box>
 
-{expandedPrinterId === p._id && (() => {
-  const latest = p.latest || {};
-  return (
-    <>
-      <Divider sx={{ my: 1, borderColor:'rgba(79,195,247,0.2)' }} />
-      <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2 }}>
-        <Box>
-          <Typography sx={{ color:'#9fd8ff' }}>Serial</Typography>
-          <Typography sx={{ fontFamily:'monospace' }}>{p.serial || '—'}</Typography>
+{expandedPrinterId === p._id && (
+  <>
+    <Divider sx={{ my: 1, borderColor:'rgba(79,195,247,0.2)' }} />
+    <Box sx={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:2 }}>
+      <Box>
+        <Typography sx={{ color:'#9fd8ff' }}>Serial</Typography>
+        <Typography sx={{ fontFamily:'monospace' }}>{p.serial || '—'}</Typography>
 
-          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Modelo</Typography>
-          <Typography sx={{ fontFamily:'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
+        <Typography sx={{ color:'#9fd8ff', mt:1 }}>Modelo</Typography>
+        <Typography sx={{ fontFamily:'monospace' }}>{p.model || p.sysDescr || '—'}</Typography>
 
-          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Última lectura</Typography>
-          <Typography sx={{ fontFamily:'monospace' }}>
-            {latest.lastSeenAt ? new Date(latest.lastSeenAt).toLocaleString() : '—'}
-          </Typography>
+        <Typography sx={{ color:'#9fd8ff', mt:1 }}>Última lectura</Typography>
+        <Typography sx={{ fontFamily:'monospace' }}>
+          {p.latest?.lastSeenAt ? new Date(p.latest.lastSeenAt).toLocaleString() : '—'}
+        </Typography>
 
-          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
-          <Typography sx={{ fontWeight:800 }}>{latest.lastPageCount ?? '—'}</Typography>
+        <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador de páginas</Typography>
+        <Typography sx={{ fontWeight:800 }}>{p.latest?.lastPageCount ?? '—'}</Typography>
 
-          <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador B/N</Typography>
-          <Typography sx={{ fontWeight:800 }}>{latest.lastPageMono ?? '—'}</Typography>
+        <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador B/N</Typography>
+        <Typography sx={{ fontWeight:800 }}>{p.latest?.lastPageMono ?? '—'}</Typography>
 
-
-          {latest.lastPageColor != null && latest.lastPageColor > 0 && (
-            <>
-              <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador Color</Typography>
-              <Typography sx={{ fontWeight:800 }}>{latest.lastPageColor ?? '—'}</Typography>
-            </>
-          )}
-        </Box>
-
-              <Box>
-                <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
-                <Stack spacing={1}>
-                  {(latest.lastSupplies || []).map((s, idx) => {
-                    const pct = tonerPercent(s.level, s.max);
-                    return (
-                      <Box key={idx}>
-                        <Box sx={{ display:'flex', justifyContent:'space-between' }}>
-                          <Typography>{s.name || `Supply ${idx+1}`}</Typography>
-                          <Typography sx={{ color: pct<=20 ? '#ff9e9e' : '#9de6a2' }}>
-                            {isFinite(pct) ? `${pct}%` : '—'}
-                          </Typography>
-                        </Box>
-                        <LinearProgress
-                          variant="determinate"
-                          value={isFinite(pct) ? pct : 0}
-                          sx={{
-                            height: 8,
-                            borderRadius: 6,
-                            bgcolor: 'rgba(255,255,255,0.08)',
-                            '& .MuiLinearProgress-bar': { transition: 'width .3s' }
-                          }}
-                        />
-                      </Box>
-                    );
-                  })}
-                  {(!latest.lastSupplies || latest.lastSupplies.length === 0) && (
-                    <Typography sx={{ color:'#89cff0' }}>Sin datos de tóner.</Typography>
-                  )}
-                </Stack>
-              </Box>
-            </Box>
+        {p.latest?.lastPageColor != null && p.latest.lastPageColor > 0 && (
+          <>
+            <Typography sx={{ color:'#9fd8ff', mt:1 }}>Contador Color</Typography>
+            <Typography sx={{ fontWeight:800 }}>{p.latest.lastPageColor ?? '—'}</Typography>
           </>
-        );
-      })()}
+        )}
+      </Box>
+
+      <Box>
+        <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
+        <Stack spacing={1}>
+          {(p.latest?.lastSupplies || []).map((s, idx) => {
+            const pct = tonerPercent(s.level, s.max);
+            return (
+              <Box key={idx}>
+                <Box sx={{ display:'flex', justifyContent:'space-between' }}>
+                  <Typography>{s.name || `Supply ${idx+1}`}</Typography>
+                  <Typography sx={{ color: pct<=20 ? '#ff9e9e' : '#9de6a2' }}>
+                    {isFinite(pct) ? `${pct}%` : '—'}
+                  </Typography>
+                </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={isFinite(pct) ? pct : 0}
+                  sx={{
+                    height: 8,
+                    borderRadius: 6,
+                    bgcolor: 'rgba(255,255,255,0.08)',
+                    '& .MuiLinearProgress-bar': { transition: 'width .3s' }
+                  }}
+                />
+              </Box>
+            );
+          })}
+          {(!p.latest?.lastSupplies || p.latest.lastSupplies.length === 0) && (
+            <Typography sx={{ color:'#89cff0' }}>Sin datos de tóner.</Typography>
+          )}
+        </Stack>
+      </Box>
+    </Box>
+  </>
+)}
+        
       </Box>
     );
   })}
- </Stack>
+</Stack>
     </CardContent>
   </Card>
 )}
