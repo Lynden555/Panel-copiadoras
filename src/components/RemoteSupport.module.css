@@ -1,0 +1,85 @@
+.container{
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #111;
+  max-width:1200px;
+  margin: 18px auto;
+  padding: 18px;
+  box-sizing: border-box;
+}
+.header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.header h2{ margin:0; font-size:20px; }
+.roleSwitch{ display:flex; gap:8px; align-items:center; }
+.roleSwitch label{ padding:8px 12px; border-radius:8px; cursor:pointer; color:#666; background:#f4f4f6; }
+.roleSwitch label.active{ background:linear-gradient(90deg,#6b5cff,#8d7bff); color:white; box-shadow:0 4px 14px rgba(107,92,255,0.14); }
+
+.main{
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap:16px;
+}
+.sidebar{
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* separa las cards */
+}
+.card{
+  background:white;
+  border:1px solid #eee;
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:12px;
+  box-shadow: 0 6px 18px rgba(15,15,15,0.03);
+}
+.sessionCard{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+.sessionId{ font-weight:700; font-size:18px; letter-spacing:1px; margin-top:2px; color:#222; }
+.sessionActions{ display:flex; gap:8px; margin-top:6px; }
+.controls{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.btn{ padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:white; cursor:pointer; }
+.btn.primary{ background:linear-gradient(90deg,#4f46e5,#7c6cff); color:white; border:0; }
+.btn.ghost{ background:transparent; border:1px dashed #ddd; }
+input{ width:100%; padding:8px 10px; border-radius:8px; border:1px solid #e6e6ef; box-sizing:border-box; }
+
+.statusRow{ display:flex; justify-content:space-between; margin-top:8px; }
+.badgeOk{ background:#e6f9f0; color:#0b8a48; padding:6px 8px; border-radius:999px; font-weight:600; }
+.badgeWarn{ background:#fff6e6; color:#a44d00; padding:6px 8px; border-radius:999px; font-weight:600; }
+
+.viewer{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+.viewerHeader{ display:flex; justify-content:space-between; align-items:center; }
+.videoWrap{
+  min-height:360px;
+  background:#0f1724;
+  border-radius:10px;
+  position:relative;
+  overflow:hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.video{ width:100%; height:100%; object-fit:contain; background:black; }
+.placeholder{ position:absolute; color:#cbd5e1; font-size:14px; text-align:center; padding:20px; }
+.bottomBar{ display:flex; justify-content:space-between; align-items:center; margin-top:6px; gap:8px; flex-wrap:wrap; }
+.quickButtons{ display:flex; gap:8px; }
+
+.logBox{ max-height:160px; overflow:auto; background:#fafafa; border-radius:8px; padding:8px; border:1px solid #f0f0f3; }
+.logLine{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; font-size:12px; color:#333; padding:6px 0; border-bottom:1px dotted #eee; }
+.empty{ color:#9aa4b2; font-size:13px; padding:12px 0; }
+
+.sessionCard .btn{ padding:6px 10px; font-size:13px; }
+.viewerActions .btn{ margin-left:8px; }
+
+@media (max-width:980px){
+  .main{ grid-template-columns: 1fr; }
+  .sidebar{ order:2; }
+  .viewer{ order:1; }
+  .videoWrap{ min-height:260px; }
+}
