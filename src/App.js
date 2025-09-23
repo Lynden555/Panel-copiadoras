@@ -13,7 +13,6 @@ import AppCliente from './components/AppCliente';
 import AppTecnico from './components/AppTecnico';
 import EmpresaAdmin from './components/EmpresasAdmin';
 import RemoteSupport from './components/RemoteSupport';
-import Pagos from './components/Pagos';
 
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
@@ -173,7 +172,6 @@ useEffect(() => {
         <Route path="/app-tecnico" element={<AppTecnico />} />
         <Route path="/monitoreo" element={<EmpresaAdmin />} />
         <Route path='/remote-support' element={<RemoteSupport />} />
-        <Route path='/pagos' element={<Pagos />} />
 
         {/* Redireccionamiento general */}
         <Route path="/" element={<Navigate to="/login" />} />
