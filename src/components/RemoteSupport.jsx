@@ -14,16 +14,16 @@ import PersonIcon from "@mui/icons-material/Person";
 
 // Backend SaaS (Railway)
 const API_BASE = "https://copias-backend-production.up.railway.app";
-// Servidor de signaling (AWS Lightsail) – por ahora WS sin TLS
+// Servidor de signaling (AWS Lightsail)
 const SIGNALING_URL = "ws://34.222.248.174:3001";
 
-// Configuración WebRTC (luego agregamos TURN)
+// Configuración WebRTC
 const RTC_CONFIG = {
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
 };
 
 export default function RemoteSupport() {
-  const [role, setRole] = useState("cliente"); // "cliente" | "tecnico"
+  const [role, setRole] = useState("tecnico"); // "cliente" | "tecnico"
   const [sessionCode, setSessionCode] = useState("");
   const [status, setStatus] = useState("idle"); // idle | pending | connected | closed
   const [message, setMessage] = useState("");
@@ -31,9 +31,7 @@ export default function RemoteSupport() {
   // Refs para evitar problemas de sincronía
   const wsRef = useRef(null);
   const pcRef = useRef(null);
-  const localStreamRef = useRef(null);
   const remoteVideoRef = useRef(null);
-  const localVideoRef = useRef(null);
   const codeRef = useRef("");
 
   useEffect(() => {
@@ -41,20 +39,26 @@ export default function RemoteSupport() {
   }, [sessionCode]);
 
   // ---------- Helpers ----------
-  const log = (txt) => setMessage(txt);
+  const log = (txt) => {
+    console.log(txt);
+    setMessage(txt);
+  };
 
+  // ---------- WebRTC ----------
   const initPeerConnection = () => {
     // Cierra anterior si existe
     if (pcRef.current) {
       try { pcRef.current.close(); } catch {}
     }
+    
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
+    // Manejar candidatos ICE (CORREGIDO: tipo 'ice-candidate')
     pc.onicecandidate = (e) => {
-      if (e.candidate && wsRef.current) {
+      if (e.candidate && wsRef.current?.readyState === WebSocket.OPEN) {
         wsRef.current.send(
           JSON.stringify({
-            type: "candidate",
+            type: "ice-candidate", // CORREGIDO: era "candidate"
             candidate: e.candidate,
             code: codeRef.current,
           })
@@ -62,10 +66,20 @@ export default function RemoteSupport() {
       }
     };
 
+    // Manejar stream remoto (pantalla del agente)
     pc.ontrack = (event) => {
-      // El TÉCNICO verá aquí la pantalla remota
-      if (remoteVideoRef.current) {
+      log("🎥 Recibiendo stream de pantalla remota...");
+      if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        log("✅ Pantalla remota activa");
+      }
+    };
+
+    // Manejar cambios de estado de conexión
+    pc.onconnectionstatechange = () => {
+      log(`🔗 Estado WebRTC: ${pc.connectionState}`);
+      if (pc.connectionState === "connected") {
+        log("✅ Conexión WebRTC establecida");
       }
     };
 
@@ -73,142 +87,192 @@ export default function RemoteSupport() {
     return pc;
   };
 
+  // ---------- Signaling WebSocket (COMPLETAMENTE ACTUALIZADO) ----------
   const ensureWebSocket = (onOpen) => {
-    // Cierra anterior si existe
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
     }
+
+    log("📡 Conectando al servidor de signaling...");
     const ws = new WebSocket(SIGNALING_URL);
 
     ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "join", code: codeRef.current }));
+      log("✅ Conectado al servidor de signaling");
+      
+      // Enviar mensaje de unión (CORREGIDO: rol 'technician' en inglés)
+      const joinMsg = { 
+        type: "join", 
+        code: codeRef.current, 
+        role: "technician" // CORREGIDO: era "tecnico"
+      };
+      ws.send(JSON.stringify(joinMsg));
+      log(`🔗 Uniéndose a sesión: ${codeRef.current}`);
+      
       onOpen && onOpen();
     };
 
     ws.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      // Mensajes del otro peer, ruteados por el signaling
-      if (!pcRef.current) return;
-
-      if (data.type === "offer" && role === "cliente") {
-        // El técnico envió una offer → el cliente responde
-        await pcRef.current.setRemoteDescription(data.offer);
-        const answer = await pcRef.current.createAnswer();
-        await pcRef.current.setLocalDescription(answer);
-        ws.send(JSON.stringify({ type: "answer", answer, code: codeRef.current }));
-        log("📨 Respondí la offer con mi answer.");
-      }
-
-      if (data.type === "answer" && role === "tecnico") {
-        await pcRef.current.setRemoteDescription(data.answer);
-        log("✅ Conexión WebRTC establecida.");
-      }
-
-      if (data.type === "candidate") {
-        try {
-          await pcRef.current.addIceCandidate(data.candidate);
-        } catch (err) {
-          console.warn("Error al añadir ICE", err);
-        }
+      try {
+        const data = JSON.parse(event.data);
+        log(`📨 Mensaje recibido: ${data.type}`);
+        
+        await handleSignalingMessage(data);
+      } catch (error) {
+        log(`❌ Error procesando mensaje: ${error.message}`);
       }
     };
 
+    ws.onerror = (error) => {
+      log(`❌ Error de WebSocket: ${error.message}`);
+    };
+
     ws.onclose = () => {
-      // No hacemos nada crítico; PM2 mantiene el server vivo.
+      log("🔌 Desconectado del servidor de signaling");
+      setStatus("closed");
     };
 
     wsRef.current = ws;
   };
 
-  const stopLocalStream = () => {
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach((t) => t.stop());
-      localStreamRef.current = null;
+  // ---------- Manejo de mensajes de signaling (ACTUALIZADO) ----------
+  const handleSignalingMessage = async (data) => {
+    switch (data.type) {
+      case "welcome":
+        log("👋 Bienvenido al servidor de signaling");
+        break;
+
+      case "joined":
+        log("✅ Unido correctamente a la sesión");
+        setStatus("pending");
+        break;
+
+      case "peer-joined":
+        log("👤 Agente detectado en la sesión");
+        // Cuando el agente se conecta, el técnico crea la oferta
+        if (pcRef.current && pcRef.current.connectionState === "new") {
+          await createAndSendOffer();
+        }
+        break;
+
+      case "peer-disconnected":
+        log("👤 Agente desconectado");
+        break;
+
+      case "answer":
+        log("📥 Respuesta recibida del agente");
+        if (pcRef.current) {
+          await pcRef.current.setRemoteDescription(data.answer);
+          log("✅ Answer configurada - Conexión establecida");
+          setStatus("connected");
+        }
+        break;
+
+      case "ice-candidate": // CORREGIDO: era "candidate"
+        if (data.candidate && pcRef.current) {
+          try {
+            await pcRef.current.addIceCandidate(data.candidate);
+            log("🧊 Candidato ICE añadido");
+          } catch (err) {
+            console.warn("Error añadiendo ICE candidate:", err);
+          }
+        }
+        break;
+
+      case "error":
+        log(`❌ Error del servidor: ${data.message}`);
+        break;
+
+      default:
+        log(`⚠️ Mensaje no manejado: ${data.type}`);
     }
   };
 
-  const cleanupConnections = () => {
-    try { wsRef.current && wsRef.current.close(); } catch {}
-    try { pcRef.current && pcRef.current.close(); } catch {}
-    stopLocalStream();
+  // ---------- Crear y enviar oferta WebRTC ----------
+  const createAndSendOffer = async () => {
+    if (!pcRef.current || !wsRef.current) return;
+
+    try {
+      log("📤 Creando oferta WebRTC...");
+      const offer = await pcRef.current.createOffer();
+      await pcRef.current.setLocalDescription(offer);
+
+      wsRef.current.send(JSON.stringify({
+        type: "offer",
+        offer: offer,
+        code: codeRef.current
+      }));
+      log("✅ Oferta enviada al agente");
+    } catch (error) {
+      log(`❌ Error creando oferta: ${error.message}`);
+    }
   };
 
   // ---------- Backend SaaS ----------
   const handleCreate = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/remote/create`, { method: "POST" });
-      const data = await res.json();
-      if (!data.ok) return log(`❌ Error: ${data.error}`);
-
-      setSessionCode(data.code);
-      setStatus("pending");
-      log("Código generado, compártelo con el técnico.");
-
-      // El CLIENTE se prepara: PC + captura de pantalla + WS
-      initPeerConnection();
-
-      // Capturar pantalla (requerirá gesto de usuario)
-      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
-      localStreamRef.current = stream;
-      stream.getTracks().forEach((tr) => pcRef.current.addTrack(tr, stream));
-      if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-
-      ensureWebSocket(); // join y quedar escuchando offers
-    } catch (err) {
-      log(`⚠️ Error de red: ${err.message}`);
-    }
+    // Esta función es para el CLIENTE (agente)
+    // Pero en este componente estamos enfocados en el TÉCNICO
+    log("⚠️ Esta función es para el cliente. Cambia a modo técnico.");
   };
 
   const handleConnect = async () => {
-    if (!sessionCode.trim()) return;
+    if (!sessionCode.trim()) {
+      log("❌ Ingresa un código de sesión");
+      return;
+    }
 
     try {
-      // Primero valida con SaaS
+      // Validar sesión con el backend
       const res = await fetch(`${API_BASE}/remote/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: sessionCode }),
       });
+      
       const data = await res.json();
-      if (!data.ok) return log(`❌ Error: ${data.error}`);
+      if (!data.ok) {
+        log(`❌ Error del backend: ${data.error}`);
+        return;
+      }
 
-      setStatus("connected");
-      log(`✅ Conectado a la sesión ${sessionCode}`);
+      log(`✅ Sesión ${sessionCode} validada`);
 
-      // El TÉCNICO inicia: PC + WS + crea offer
+      // Inicializar WebRTC y WebSocket
       initPeerConnection();
+      ensureWebSocket();
 
-      ensureWebSocket(async () => {
-        // Creamos y enviamos la offer
-        const offer = await pcRef.current.createOffer({
-          offerToReceiveAudio: false,
-          offerToReceiveVideo: true,
-        });
-        await pcRef.current.setLocalDescription(offer);
-        wsRef.current.send(JSON.stringify({ type: "offer", offer, code: codeRef.current }));
-        log("📨 Envié la offer, esperando answer del cliente…");
-      });
     } catch (err) {
-      log(`⚠️ Error de red: ${err.message}`);
+      log(`❌ Error de red: ${err.message}`);
     }
   };
 
   const handleClose = async () => {
     if (!sessionCode) return;
+    
     try {
       await fetch(`${API_BASE}/remote/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: sessionCode }),
       });
-    } catch {}
-    cleanupConnections();
+    } catch (err) {
+      console.warn("Error cerrando sesión en backend:", err);
+    }
+
+    // Limpiar conexiones
+    try { wsRef.current?.close(); } catch {}
+    try { pcRef.current?.close(); } catch {}
+    
     setStatus("closed");
-    log(`❌ Sesión ${sessionCode} cerrada`);
+    log(`🔌 Sesión ${sessionCode} cerrada`);
   };
 
   // Limpieza al desmontar
-  useEffect(() => () => cleanupConnections(), []);
+  useEffect(() => {
+    return () => {
+      try { wsRef.current?.close(); } catch {}
+      try { pcRef.current?.close(); } catch {}
+    };
+  }, []);
 
   return (
     <Card
@@ -229,10 +293,10 @@ export default function RemoteSupport() {
         <Stack spacing={3} alignItems="center">
           <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
           <Typography variant="h6" sx={{ fontWeight: 800, color: "#4fc3f7" }}>
-            Asistencia Remota
+            Técnico - Asistencia Remota
           </Typography>
 
-          {/* Selector de rol */}
+          {/* Solo mostramos el selector de rol para debug */}
           <ToggleButtonGroup
             value={role}
             exclusive
@@ -247,70 +311,24 @@ export default function RemoteSupport() {
             </ToggleButton>
           </ToggleButtonGroup>
 
-          {/* Cliente: generar código y compartir pantalla */}
-          {role === "cliente" && status === "idle" && (
-            <>
-              <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
-                Genera un código y compártelo con el técnico.
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={handleCreate}
-                sx={{
-                  bgcolor: "#4fc3f7",
-                  color: "#0b132b",
-                  fontWeight: 800,
-                  borderRadius: "12px",
-                  px: 3,
-                  "&:hover": { bgcolor: "#29b6f6" },
-                }}
-              >
-                Generar código y compartir pantalla
-              </Button>
-            </>
-          )}
-
-          {role === "cliente" && status === "pending" && (
-            <>
-              <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
-                Código generado:
-              </Typography>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 900,
-                  letterSpacing: 3,
-                  color: "#fff",
-                  bgcolor: "rgba(12,22,48,0.85)",
-                  p: 2,
-                  borderRadius: "12px",
-                }}
-              >
-                {sessionCode}
-              </Typography>
-              <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
-                Esperando a que el técnico se conecte…
-              </Typography>
-            </>
-          )}
-
           {/* Técnico: ingresar código y ver pantalla remota */}
-          {role === "tecnico" && status !== "connected" && status !== "closed" && (
+          {role === "tecnico" && (
             <>
-              <Typography sx={{ color: "#9fd8ff" }}>
-                Ingresa el código que te pasó el cliente:
+              <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
+                Ingresa el código que te proporcionó el cliente
               </Typography>
+              
               <TextField
                 label="Código de sesión"
                 variant="outlined"
                 fullWidth
                 value={sessionCode}
                 onChange={(e) => setSessionCode(e.target.value)}
+                disabled={status === "pending" || status === "connected"}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     color: "white",
                     bgcolor: "rgba(12,22,48,0.55)",
-                    backdropFilter: "blur(6px)",
                     "& fieldset": { borderColor: "#27496b" },
                     "&:hover fieldset": { borderColor: "#4fc3f7" },
                     "&.Mui-focused fieldset": { borderColor: "#4fc3f7" },
@@ -319,22 +337,65 @@ export default function RemoteSupport() {
                   "& .MuiInputLabel-root.Mui-focused": { color: "#4fc3f7" },
                 }}
               />
-              <Button
-                variant="contained"
-                onClick={handleConnect}
-                disabled={!sessionCode.trim()}
-                sx={{
-                  bgcolor: "#4fc3f7",
-                  color: "#0b132b",
-                  fontWeight: 800,
-                  borderRadius: "12px",
-                  px: 3,
-                  "&:hover": { bgcolor: "#29b6f6" },
-                }}
-              >
-                Conectar y ver pantalla
-              </Button>
+
+              {status === "idle" && (
+                <Button
+                  variant="contained"
+                  onClick={handleConnect}
+                  disabled={!sessionCode.trim()}
+                  sx={{
+                    bgcolor: "#4fc3f7",
+                    color: "#0b132b",
+                    fontWeight: 800,
+                    borderRadius: "12px",
+                    px: 3,
+                    "&:hover": { bgcolor: "#29b6f6" },
+                  }}
+                >
+                  Conectar a sesión
+                </Button>
+              )}
+
+              {(status === "pending" || status === "connected") && (
+                <>
+                  <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
+                    Conectado a sesión:
+                  </Typography>
+                  <Typography
+                    variant="h5"
+                    sx={{
+                      fontWeight: 900,
+                      letterSpacing: 2,
+                      color: "#fff",
+                      bgcolor: "rgba(12,22,48,0.85)",
+                      p: 2,
+                      borderRadius: "12px",
+                    }}
+                  >
+                    {sessionCode}
+                  </Typography>
+                  
+                  {status === "pending" && (
+                    <Typography sx={{ color: "#ffd54f", textAlign: "center" }}>
+                      Esperando que el agente comparta pantalla...
+                    </Typography>
+                  )}
+                  
+                  {status === "connected" && (
+                    <Typography sx={{ color: "#9de6a2", textAlign: "center" }}>
+                      ✅ Viendo pantalla remota
+                    </Typography>
+                  )}
+                </>
+              )}
             </>
+          )}
+
+          {/* Cliente: mensaje informativo */}
+          {role === "cliente" && (
+            <Typography sx={{ color: "#ffd54f", textAlign: "center" }}>
+              Modo técnico activado. Cambia a "Cliente" en la aplicación Electron para compartir pantalla.
+            </Typography>
           )}
 
           {/* Botón Cerrar */}
@@ -354,26 +415,33 @@ export default function RemoteSupport() {
             </Button>
           )}
 
-          {/* Videos (para pruebas) */}
-          <video
-            id="localVideo"
-            ref={localVideoRef}
-            autoPlay
-            muted
-            playsInline
-            style={{ width: "100%", borderRadius: 8, display: role === "cliente" ? "block" : "none" }}
-          />
+          {/* Video de pantalla remota */}
           <video
             id="remoteVideo"
             ref={remoteVideoRef}
             autoPlay
             playsInline
-            style={{ width: "100%", borderRadius: 8, display: role === "tecnico" ? "block" : "none" }}
+            style={{ 
+              width: "100%", 
+              maxWidth: "800px",
+              borderRadius: 8, 
+              border: "2px solid #143a66",
+              display: status === "connected" ? "block" : "none" 
+            }}
           />
 
-          {/* Mensajes */}
+          {/* Mensajes de estado */}
           {message && (
-            <Typography sx={{ mt: 1, color: "#b3e5fc", fontSize: 14, textAlign: "center" }}>
+            <Typography sx={{ 
+              mt: 1, 
+              color: "#b3e5fc", 
+              fontSize: 14, 
+              textAlign: "center",
+              bgcolor: "rgba(0,0,0,0.3)",
+              p: 1,
+              borderRadius: 1,
+              width: "100%"
+            }}>
               {message}
             </Typography>
           )}
