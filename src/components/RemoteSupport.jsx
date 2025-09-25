@@ -15,7 +15,7 @@ import PersonIcon from "@mui/icons-material/Person";
 // Backend SaaS (Railway)
 const API_BASE = "https://copias-backend-production.up.railway.app";
 // Servidor de signaling (AWS Lightsail)
-const SIGNALING_URL = "ws://34.222.248.174:3001";
+const SIGNALING_URL = "wss://grapeassist.org";
 
 // Configuración WebRTC
 const RTC_CONFIG = {
