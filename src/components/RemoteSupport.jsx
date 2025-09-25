@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useCallback } from "react";
 import {
   Button,
   Typography,
@@ -8,16 +8,16 @@ import {
   CardContent,
   ToggleButton,
   ToggleButtonGroup,
+  Box,
 } from "@mui/material";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import PersonIcon from "@mui/icons-material/Person";
+import MouseIcon from "@mui/icons-material/Mouse";
+import KeyboardIcon from "@mui/icons-material/Keyboard";
 
-// Backend SaaS (Railway)
 const API_BASE = "https://copias-backend-production.up.railway.app";
-// Servidor de signaling (AWS Lightsail)
 const SIGNALING_URL = "wss://grapeassist.org";
 
-// Configuración WebRTC MEJORADA
 const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
@@ -30,12 +30,14 @@ export default function RemoteSupport() {
   const [sessionCode, setSessionCode] = useState("");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
+  const [controlEnabled, setControlEnabled] = useState(false);
 
-  // Refs
   const wsRef = useRef(null);
   const pcRef = useRef(null);
+  const dataChannelRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const codeRef = useRef("");
+  const mousePressedRef = useRef(false);
 
   useEffect(() => {
     codeRef.current = sessionCode;
@@ -46,15 +48,132 @@ export default function RemoteSupport() {
     setMessage(txt);
   };
 
-  // ---------- WebRTC MEJORADO ----------
-  const initPeerConnection = () => {
+  // ---------- CONTROL REMOTO ----------
+  const sendCommand = useCallback((command) => {
+    if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
+      try {
+        dataChannelRef.current.send(JSON.stringify(command));
+      } catch (error) {
+        console.error('Error enviando comando:', error);
+      }
+    }
+  }, []);
+
+  const handleMouseMove = useCallback((event) => {
+    if (!controlEnabled || !remoteVideoRef.current) return;
+
+    const video = remoteVideoRef.current;
+    const rect = video.getBoundingClientRect();
+    
+    // Calcular coordenadas relativas al video
+    const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+    const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+    
+    // Normalizar coordenadas (0-1)
+    const normalizedX = x / rect.width;
+    const normalizedY = y / rect.height;
+
+    sendCommand({
+      type: 'mouseMove',
+      x: Math.round(normalizedX * 1920), // Asumiendo resolución 1920x1080
+      y: Math.round(normalizedY * 1080)
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const handleMouseDown = useCallback((event) => {
+    if (!controlEnabled) return;
+    
+    mousePressedRef.current = true;
+    const button = event.button === 2 ? 'right' : 'left';
+    
+    sendCommand({
+      type: 'mouseClick',
+      button: button,
+      double: false,
+      down: true
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const handleMouseUp = useCallback((event) => {
+    if (!controlEnabled) return;
+    
+    mousePressedRef.current = false;
+    const button = event.button === 2 ? 'right' : 'left';
+    
+    sendCommand({
+      type: 'mouseClick',
+      button: button,
+      double: false,
+      down: false
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const handleDoubleClick = useCallback((event) => {
+    if (!controlEnabled) return;
+    
+    const button = event.button === 2 ? 'right' : 'left';
+    sendCommand({
+      type: 'mouseClick',
+      button: button,
+      double: true
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const handleWheel = useCallback((event) => {
+    if (!controlEnabled) return;
+    
+    sendCommand({
+      type: 'scroll',
+      dx: event.deltaX,
+      dy: event.deltaY
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const handleKeyDown = useCallback((event) => {
+    if (!controlEnabled) return;
+    
+    // Prevenir comportamiento por defecto del navegador
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+      event.preventDefault();
+    }
+
+    sendCommand({
+      type: 'keyToggle',
+      key: event.key.toLowerCase(),
+      down: true,
+      modifiers: getModifiers(event)
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const handleKeyUp = useCallback((event) => {
+    if (!controlEnabled) return;
+    
+    event.preventDefault();
+    sendCommand({
+      type: 'keyToggle',
+      key: event.key.toLowerCase(),
+      down: false,
+      modifiers: getModifiers(event)
+    });
+  }, [controlEnabled, sendCommand]);
+
+  const getModifiers = (event) => {
+    const modifiers = [];
+    if (event.ctrlKey) modifiers.push('control');
+    if (event.altKey) modifiers.push('alt');
+    if (event.shiftKey) modifiers.push('shift');
+    if (event.metaKey) modifiers.push('command');
+    return modifiers;
+  };
+
+  // ---------- WEBRTC MEJORADO ----------
+  const initPeerConnection = useCallback(() => {
     if (pcRef.current) {
       try { pcRef.current.close(); } catch {}
     }
     
     const pc = new RTCPeerConnection(RTC_CONFIG);
 
-    // Configurar recepción de video/pantalla
     pc.ontrack = (event) => {
       console.log("🎥 Track recibido:", event.track.kind, event.streams);
       if (event.streams && event.streams[0]) {
@@ -81,12 +200,35 @@ export default function RemoteSupport() {
       log(`🔗 Estado WebRTC: ${pc.connectionState}`);
     };
 
+    // Configurar DataChannel para control remoto
+    pc.ondatachannel = (event) => {
+      const channel = event.channel;
+      if (channel.label === 'remoteControl') {
+        dataChannelRef.current = channel;
+        
+        channel.onopen = () => {
+          log('✅ Canal de control remoto listo');
+          setControlEnabled(true);
+        };
+
+        channel.onclose = () => {
+          log('🔌 Canal de control remoto cerrado');
+          setControlEnabled(false);
+        };
+
+        channel.onerror = (error) => {
+          log(`❌ Error en canal de control: ${error}`);
+          setControlEnabled(false);
+        };
+      }
+    };
+
     pcRef.current = pc;
     return pc;
-  };
+  }, []);
 
   // ---------- WebSocket MEJORADO ----------
-  const ensureWebSocket = () => {
+  const ensureWebSocket = useCallback(() => {
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
     }
@@ -100,7 +242,7 @@ export default function RemoteSupport() {
       const joinMsg = { 
         type: "join", 
         code: codeRef.current, 
-        role: "technician"  // Técnico que RECIBE la pantalla
+        role: "technician"
       };
       ws.send(JSON.stringify(joinMsg));
       log(`🔗 Uniéndose como técnico: ${codeRef.current}`);
@@ -124,12 +266,13 @@ export default function RemoteSupport() {
     ws.onclose = () => {
       log("🔌 Desconectado del servidor");
       setStatus("closed");
+      setControlEnabled(false);
     };
 
     wsRef.current = ws;
-  };
+  }, []);
 
-  // ---------- Manejo de mensajes CORREGIDO ----------
+  // ---------- Manejo de mensajes ----------
   const handleSignalingMessage = async (data) => {
     switch (data.type) {
       case "joined":
@@ -139,7 +282,6 @@ export default function RemoteSupport() {
 
       case "peer-joined":
         log("👤 Agente conectado - Esperando oferta...");
-        // NO crear oferta aquí - el AGENTE debe crear la oferta
         break;
 
       case "offer":
@@ -179,6 +321,24 @@ export default function RemoteSupport() {
       await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       log("✅ Oferta establecida - Creando respuesta...");
 
+      // Crear DataChannel para control remoto
+      const dataChannel = pcRef.current.createDataChannel('remoteControl', {
+        ordered: true,
+        maxPacketLifeTime: 3000
+      });
+
+      dataChannelRef.current = dataChannel;
+      
+      dataChannel.onopen = () => {
+        log('✅ Canal de control remoto (iniciado) listo');
+        setControlEnabled(true);
+      };
+
+      dataChannel.onclose = () => {
+        log('🔌 Canal de control remoto cerrado');
+        setControlEnabled(false);
+      };
+
       // Crear respuesta
       const answer = await pcRef.current.createAnswer();
       await pcRef.current.setLocalDescription(answer);
@@ -207,7 +367,6 @@ export default function RemoteSupport() {
     }
 
     try {
-      // Validar sesión con el backend
       const res = await fetch(`${API_BASE}/remote/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -221,8 +380,6 @@ export default function RemoteSupport() {
       }
 
       log(`✅ Sesión ${sessionCode} validada`);
-
-      // Inicializar conexiones
       initPeerConnection();
       ensureWebSocket();
 
@@ -244,37 +401,74 @@ export default function RemoteSupport() {
       console.warn("Error cerrando sesión:", err);
     }
 
-    // Limpiar
     try { wsRef.current?.close(); } catch {}
     try { pcRef.current?.close(); } catch {}
+    try { dataChannelRef.current?.close(); } catch {}
     
     setStatus("idle");
+    setControlEnabled(false);
     log(`🔌 Sesión cerrada`);
   };
+
+  const toggleControl = () => {
+    setControlEnabled(!controlEnabled);
+    log(controlEnabled ? '🔒 Control remoto deshabilitado' : '✅ Control remoto habilitado');
+  };
+
+  // Event listeners para el video
+  useEffect(() => {
+    const video = remoteVideoRef.current;
+    if (!video) return;
+
+    const events = {
+      mousemove: handleMouseMove,
+      mousedown: handleMouseDown,
+      mouseup: handleMouseUp,
+      dblclick: handleDoubleClick,
+      wheel: handleWheel,
+      contextmenu: (e) => e.preventDefault()
+    };
+
+    Object.entries(events).forEach(([event, handler]) => {
+      video.addEventListener(event, handler);
+    });
+
+    return () => {
+      Object.entries(events).forEach(([event, handler]) => {
+        video.removeEventListener(event, handler);
+      });
+    };
+  }, [handleMouseMove, handleMouseDown, handleMouseUp, handleDoubleClick, handleWheel]);
+
+  // Event listeners para teclado
+  useEffect(() => {
+    if (!controlEnabled) return;
+
+    const handleKeyEvents = (event) => {
+      if (event.type === 'keydown') handleKeyDown(event);
+      else if (event.type === 'keyup') handleKeyUp(event);
+    };
+
+    window.addEventListener('keydown', handleKeyEvents);
+    window.addEventListener('keyup', handleKeyEvents);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyEvents);
+      window.removeEventListener('keyup', handleKeyEvents);
+    };
+  }, [controlEnabled, handleKeyDown, handleKeyUp]);
 
   // Limpieza
   useEffect(() => {
     return () => {
       try { wsRef.current?.close(); } catch {}
       try { pcRef.current?.close(); } catch {}
+      try { dataChannelRef.current?.close(); } catch {}
     };
   }, []);
 
   return (
-    <Card
-      sx={{
-        bgcolor: "#101b3a",
-        color: "white",
-        border: "2px solid #143a66",
-        borderRadius: "16px",
-        boxShadow:
-          "0 0 0 1px rgba(41,182,246,0.15), 0 10px 30px rgba(0,0,0,0.45), inset 0 0 40px rgba(79,195,247,0.08)",
-        overflow: "hidden",
-        maxWidth: 520,
-        mx: "auto",
-        mt: 4,
-      }}
-    >
+    <Card sx={{ bgcolor: "#101b3a", color: "white", border: "2px solid #143a66", borderRadius: "16px", maxWidth: 900, mx: "auto", mt: 4 }}>
       <CardContent sx={{ p: 3 }}>
         <Stack spacing={3} alignItems="center">
           <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
@@ -282,18 +476,9 @@ export default function RemoteSupport() {
             Técnico - Asistencia Remota
           </Typography>
 
-          <ToggleButtonGroup
-            value={role}
-            exclusive
-            onChange={(e, newRole) => newRole && setRole(newRole)}
-            sx={{ bgcolor: "rgba(12,22,48,0.55)", borderRadius: "12px" }}
-          >
-            <ToggleButton value="cliente" sx={{ color: "white" }}>
-              <PersonIcon sx={{ mr: 1 }} /> Cliente
-            </ToggleButton>
-            <ToggleButton value="tecnico" sx={{ color: "white" }}>
-              <SupportAgentIcon sx={{ mr: 1 }} /> Técnico
-            </ToggleButton>
+          <ToggleButtonGroup value={role} exclusive onChange={(e, newRole) => newRole && setRole(newRole)}>
+            <ToggleButton value="cliente"><PersonIcon sx={{ mr: 1 }} /> Cliente</ToggleButton>
+            <ToggleButton value="tecnico"><SupportAgentIcon sx={{ mr: 1 }} /> Técnico</ToggleButton>
           </ToggleButtonGroup>
 
           {role === "tecnico" && (
@@ -309,33 +494,10 @@ export default function RemoteSupport() {
                 value={sessionCode}
                 onChange={(e) => setSessionCode(e.target.value)}
                 disabled={status === "pending" || status === "connected"}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    color: "white",
-                    bgcolor: "rgba(12,22,48,0.55)",
-                    "& fieldset": { borderColor: "#27496b" },
-                    "&:hover fieldset": { borderColor: "#4fc3f7" },
-                    "&.Mui-focused fieldset": { borderColor: "#4fc3f7" },
-                  },
-                  "& .MuiInputLabel-root": { color: "#89cff0" },
-                  "& .MuiInputLabel-root.Mui-focused": { color: "#4fc3f7" },
-                }}
               />
 
               {status === "idle" && (
-                <Button
-                  variant="contained"
-                  onClick={handleConnect}
-                  disabled={!sessionCode.trim()}
-                  sx={{
-                    bgcolor: "#4fc3f7",
-                    color: "#0b132b",
-                    fontWeight: 800,
-                    borderRadius: "12px",
-                    px: 3,
-                    "&:hover": { bgcolor: "#29b6f6" },
-                  }}
-                >
+                <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim()}>
                   Conectar a sesión
                 </Button>
               )}
@@ -345,73 +507,69 @@ export default function RemoteSupport() {
                   <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
                     {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
                   </Typography>
-                  <Typography
-                    variant="h5"
-                    sx={{
-                      fontWeight: 900,
-                      letterSpacing: 2,
-                      color: "#fff",
-                      bgcolor: "rgba(12,22,48,0.85)",
-                      p: 2,
-                      borderRadius: "12px",
-                    }}
-                  >
-                    {sessionCode}
-                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Button
+                      variant={controlEnabled ? "contained" : "outlined"}
+                      onClick={toggleControl}
+                      startIcon={<MouseIcon />}
+                      color={controlEnabled ? "success" : "primary"}
+                    >
+                      {controlEnabled ? 'Control Activo' : 'Activar Control'}
+                    </Button>
+                    
+                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+                      {sessionCode}
+                    </Typography>
+                  </Box>
                 </>
               )}
             </>
           )}
 
-          {role === "cliente" && (
-            <Typography sx={{ color: "#ffd54f", textAlign: "center" }}>
-              Modo técnico activado. Cambia a "Cliente" en la aplicación Electron para compartir pantalla.
-            </Typography>
-          )}
-
           {(status === "connected" || status === "pending") && (
-            <Button
-              variant="outlined"
-              onClick={handleClose}
-              sx={{
-                color: "#f28b82",
-                borderColor: "#f28b82",
-                fontWeight: 700,
-                borderRadius: "12px",
-                "&:hover": { borderColor: "#ef5350", color: "#ef5350" },
-              }}
-            >
+            <Button variant="outlined" onClick={handleClose}>
               Cerrar sesión
             </Button>
           )}
 
-          {/* Video - Siempre visible pero oculto cuando no hay conexión */}
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ 
-              width: "100%", 
-              maxWidth: "800px",
-              borderRadius: 8, 
-              border: "2px solid #143a66",
-              display: status === "connected" ? "block" : "none",
-              backgroundColor: "#000"
-            }}
-          />
+          {/* Video con eventos de control */}
+          <Box sx={{ position: 'relative', width: '100%' }}>
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ 
+                width: "100%", 
+                borderRadius: 8, 
+                border: "2px solid #143a66",
+                display: status === "connected" ? "block" : "none",
+                backgroundColor: "#000",
+                cursor: controlEnabled ? 'crosshair' : 'default'
+              }}
+            />
+            
+            {status === "connected" && (
+              <Box sx={{ 
+                position: 'absolute', 
+                top: 8, 
+                right: 8, 
+                bgcolor: 'rgba(0,0,0,0.7)', 
+                color: controlEnabled ? '#4caf50' : '#f44336',
+                px: 2, 
+                py: 1, 
+                borderRadius: 2,
+                fontSize: '0.8rem',
+                fontWeight: 'bold'
+              }}>
+                {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
+              </Box>
+            )}
+          </Box>
 
           {message && (
-            <Typography sx={{ 
-              mt: 1, 
-              color: "#b3e5fc", 
-              fontSize: 14, 
-              textAlign: "center",
-              bgcolor: "rgba(0,0,0,0.3)",
-              p: 1,
-              borderRadius: 1,
-              width: "100%"
-            }}>
+            <Typography sx={{ mt: 1, color: "#b3e5fc", fontSize: 14, textAlign: "center" }}>
               {message}
             </Typography>
           )}
