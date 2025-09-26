@@ -208,7 +208,7 @@ const VideoWithOverlay = ({ videoRef, isFullView, status, controlEnabled, screen
         muted
         style={{ 
           width: '100%',
-          height: isFullView ? '98%' : 'auto',
+          height: isFullView ? '99%' : 'auto',
           borderRadius: 8, 
           border: "2px solid #143a66",
           display: status === "connected" ? "block" : "none",
@@ -1009,7 +1009,7 @@ export default function RemoteSupport() {
               )}
 
               {/* Video preview */}
-              <Box sx={{ position: 'relative', width: '100%', mt: 2, height: 200 }}>
+              <Box sx={{ position: 'relative', width: '100%', mt: 2, height: 100 }}>
                 <VideoWithOverlay 
                   videoRef={remoteVideoRef}
                   isFullView={false}
@@ -1076,19 +1076,7 @@ export default function RemoteSupport() {
             </Box>
             
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Button
-                variant={controlEnabled ? "contained" : "outlined"}
-                onClick={toggleControl}
-                startIcon={<MouseIcon />}
-                color={controlEnabled ? "success" : "primary"}
-                size="small"
-                sx={{ 
-                  color: 'white',
-                  borderColor: controlEnabled ? '#4caf50' : '#4fc3f7'
-                }}
-              >
-                {controlEnabled ? 'Desactivar Control' : 'Activar Control'}
-              </Button>
+
               
               <Button
                 variant="outlined"
