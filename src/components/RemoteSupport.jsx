@@ -195,6 +195,68 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
   );
 };
 
+// Componente para el video con overlay de debug
+const VideoWithOverlay = ({ videoRef, isFullView, status, controlEnabled, screenResolution, videoDimensions }) => {
+  const [showDebug, setShowDebug] = useState(false);
+  
+  return (
+    <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{ 
+          width: '100%',
+          height: isFullView ? '100%' : 'auto',
+          borderRadius: 8, 
+          border: "2px solid #143a66",
+          display: status === "connected" ? "block" : "none",
+          backgroundColor: "#000",
+          cursor: controlEnabled ? 'crosshair' : 'default',
+          objectFit: 'contain'
+        }}
+        onDoubleClick={() => setShowDebug(!showDebug)}
+      />
+      
+      {showDebug && controlEnabled && (
+        <Box sx={{
+          position: 'absolute',
+          top: 8,
+          left: 8,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: 1,
+          borderRadius: 1,
+          fontSize: '0.7rem',
+          zIndex: 10
+        }}>
+          Resolución: {screenResolution.width}x{screenResolution.height}<br/>
+          Área visible: {Math.round(videoDimensions.width)}x{Math.round(videoDimensions.height)}<br/>
+          Offset: {Math.round(videoDimensions.offsetX)}, {Math.round(videoDimensions.offsetY)}
+        </Box>
+      )}
+      
+      {status === "connected" && (
+        <Box sx={{ 
+          position: 'absolute', 
+          top: 8, 
+          right: 8, 
+          bgcolor: 'rgba(0,0,0,0.7)', 
+          color: controlEnabled ? '#4caf50' : '#f44336',
+          px: 2, 
+          py: 1, 
+          borderRadius: 2,
+          fontSize: '0.8rem',
+          fontWeight: 'bold'
+        }}>
+          {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
+        </Box>
+      )}
+    </Box>
+  );
+};
+
 export default function RemoteSupport() {
   const [sessionCode, setSessionCode] = useState("");
   const [status, setStatus] = useState("idle");
@@ -202,6 +264,7 @@ export default function RemoteSupport() {
   const [controlEnabled, setControlEnabled] = useState(false);
   const [isFullView, setIsFullView] = useState(false);
   const [stream, setStream] = useState(null);
+  const [screenResolution, setScreenResolution] = useState({ width: 1920, height: 1080 });
 
   const wsRef = useRef(null);
   const pcRef = useRef(null);
@@ -210,6 +273,7 @@ export default function RemoteSupport() {
   const fullViewVideoRef = useRef(null);
   const codeRef = useRef("");
   const mousePressedRef = useRef(false);
+  const videoDimensionsRef = useRef({ width: 0, height: 0, offsetX: 0, offsetY: 0, videoWidth: 0, videoHeight: 0 });
 
   useEffect(() => {
     codeRef.current = sessionCode;
@@ -254,7 +318,83 @@ export default function RemoteSupport() {
     setMessage(txt);
   };
 
-  // ---------- CONTROL REMOTO ----------
+  // NUEVA FUNCIÓN: Calcular dimensiones reales del video
+  const calculateVideoDimensions = useCallback((videoElement) => {
+    if (!videoElement) return;
+    
+    const rect = videoElement.getBoundingClientRect();
+    const videoWidth = videoElement.videoWidth;
+    const videoHeight = videoElement.videoHeight;
+    
+    if (!videoWidth || !videoHeight) return;
+    
+    // Calcular el escalado real considerando object-fit: contain
+    const containerRatio = rect.width / rect.height;
+    const videoRatio = videoWidth / videoHeight;
+    
+    let displayWidth, displayHeight, offsetX, offsetY;
+    
+    if (videoRatio > containerRatio) {
+      // El video se escala al ancho del contenedor
+      displayWidth = rect.width;
+      displayHeight = rect.width / videoRatio;
+      offsetX = 0;
+      offsetY = (rect.height - displayHeight) / 2;
+    } else {
+      // El video se escala al alto del contenedor
+      displayHeight = rect.height;
+      displayWidth = rect.height * videoRatio;
+      offsetX = (rect.width - displayWidth) / 2;
+      offsetY = 0;
+    }
+    
+    videoDimensionsRef.current = {
+      width: displayWidth,
+      height: displayHeight,
+      offsetX: offsetX,
+      offsetY: offsetY,
+      videoWidth: videoWidth,
+      videoHeight: videoHeight
+    };
+    
+    // Actualizar resolución real del screen sharing
+    setScreenResolution({ width: videoWidth, height: videoHeight });
+  }, []);
+
+  // EFECTO para recalcular dimensiones cuando cambia el tamaño o el stream
+  useEffect(() => {
+    const video = isFullView ? fullViewVideoRef.current : remoteVideoRef.current;
+    if (!video) return;
+    
+    const handleResize = () => {
+      calculateVideoDimensions(video);
+    };
+    
+    const handleLoadedMetadata = () => {
+      calculateVideoDimensions(video);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    video.addEventListener('loadedmetadata', handleLoadedMetadata);
+    video.addEventListener('resize', handleResize);
+    
+    // Calcular inicialmente
+    const interval = setInterval(() => {
+      if (video.videoWidth > 0 && video.videoHeight > 0) {
+        calculateVideoDimensions(video);
+        clearInterval(interval);
+      }
+    }, 100);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      video.removeEventListener('resize', handleResize);
+      clearInterval(interval);
+    };
+  }, [isFullView, stream, calculateVideoDimensions]);
+
+  // ---------- CONTROL REMOTO MEJORADO ----------
   const sendCommand = useCallback((command) => {
     if (dataChannelRef.current && dataChannelRef.current.readyState === 'open') {
       try {
@@ -265,6 +405,7 @@ export default function RemoteSupport() {
     }
   }, []);
 
+  // MEJORADA: Función para manejar movimiento del mouse
   const handleMouseMove = useCallback((event) => {
     if (!controlEnabled) return;
 
@@ -272,21 +413,67 @@ export default function RemoteSupport() {
     if (!video) return;
 
     const rect = video.getBoundingClientRect();
-    const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
-    const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+    const dimensions = videoDimensionsRef.current;
     
-    const normalizedX = x / rect.width;
-    const normalizedY = y / rect.height;
+    // Si no tenemos dimensiones calculadas, usar método simple
+    if (!dimensions.width || !dimensions.videoWidth) {
+      const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
+      const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
+      
+      const normalizedX = x / rect.width;
+      const normalizedY = y / rect.height;
+
+      sendCommand({
+        type: 'mouseMove',
+        x: Math.round(normalizedX * (screenResolution.width || 1920)),
+        y: Math.round(normalizedY * (screenResolution.height || 1080))
+      });
+      return;
+    }
+    
+    // Calcular coordenadas relativas al área real del video (considerando object-fit)
+    const relativeX = event.clientX - rect.left - dimensions.offsetX;
+    const relativeY = event.clientY - rect.top - dimensions.offsetY;
+    
+    // Verificar que el click esté dentro del área visible del video
+    if (relativeX < 0 || relativeY < 0 || 
+        relativeX > dimensions.width || relativeY > dimensions.height) {
+      return; // Fuera del área del video
+    }
+    
+    // Normalizar coordenadas respecto a la resolución real del video
+    const normalizedX = relativeX / dimensions.width;
+    const normalizedY = relativeY / dimensions.height;
+    
+    // Convertir a coordenadas de la pantalla remota
+    const remoteX = Math.round(normalizedX * dimensions.videoWidth);
+    const remoteY = Math.round(normalizedY * dimensions.videoHeight);
 
     sendCommand({
       type: 'mouseMove',
-      x: Math.round(normalizedX * 1920),
-      y: Math.round(normalizedY * 1080)
+      x: remoteX,
+      y: remoteY
     });
-  }, [controlEnabled, sendCommand, isFullView]);
+  }, [controlEnabled, sendCommand, isFullView, screenResolution]);
 
+  // MEJORADA: Función para manejar clicks del mouse
   const handleMouseDown = useCallback((event) => {
     if (!controlEnabled) return;
+    
+    const video = isFullView ? fullViewVideoRef.current : remoteVideoRef.current;
+    if (!video) return;
+
+    const rect = video.getBoundingClientRect();
+    const dimensions = videoDimensionsRef.current;
+    
+    // Verificar que el click esté dentro del área del video
+    const relativeX = event.clientX - rect.left - dimensions.offsetX;
+    const relativeY = event.clientY - rect.top - dimensions.offsetY;
+    
+    if (relativeX < 0 || relativeY < 0 || 
+        relativeX > dimensions.width || relativeY > dimensions.height) {
+      return; // Ignorar clicks fuera del área del video
+    }
     
     mousePressedRef.current = true;
     const button = event.button === 2 ? 'right' : 'left';
@@ -297,7 +484,7 @@ export default function RemoteSupport() {
       double: false,
       down: true
     });
-  }, [controlEnabled, sendCommand]);
+  }, [controlEnabled, sendCommand, isFullView]);
 
   const handleMouseUp = useCallback((event) => {
     if (!controlEnabled) return;
@@ -316,13 +503,28 @@ export default function RemoteSupport() {
   const handleDoubleClick = useCallback((event) => {
     if (!controlEnabled) return;
     
+    const video = isFullView ? fullViewVideoRef.current : remoteVideoRef.current;
+    if (!video) return;
+
+    const rect = video.getBoundingClientRect();
+    const dimensions = videoDimensionsRef.current;
+    
+    // Verificar que el click esté dentro del área del video
+    const relativeX = event.clientX - rect.left - dimensions.offsetX;
+    const relativeY = event.clientY - rect.top - dimensions.offsetY;
+    
+    if (relativeX < 0 || relativeY < 0 || 
+        relativeX > dimensions.width || relativeY > dimensions.height) {
+      return; // Ignorar clicks fuera del área del video
+    }
+    
     const button = event.button === 2 ? 'right' : 'left';
     sendCommand({
       type: 'mouseClick',
       button: button,
       double: true
     });
-  }, [controlEnabled, sendCommand]);
+  }, [controlEnabled, sendCommand, isFullView]);
 
   const handleWheel = useCallback((event) => {
     if (!controlEnabled) return;
@@ -419,6 +621,11 @@ export default function RemoteSupport() {
         channel.onopen = () => {
           log('✅ Canal de control remoto listo');
           setControlEnabled(true);
+          
+          // Solicitar información de resolución al conectar
+          sendCommand({
+            type: 'getResolution'
+          });
         };
 
         channel.onclose = () => {
@@ -430,12 +637,28 @@ export default function RemoteSupport() {
           log(`❌ Error en canal de control: ${error}`);
           setControlEnabled(false);
         };
+
+        // Escuchar mensajes del agente (como la resolución)
+        channel.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'resolution') {
+              setScreenResolution({
+                width: data.width,
+                height: data.height
+              });
+              log(`📏 Resolución detectada: ${data.width}x${data.height}`);
+            }
+          } catch (error) {
+            console.error('Error procesando mensaje del agente:', error);
+          }
+        };
       }
     };
 
     pcRef.current = pc;
     return pc;
-  }, []);
+  }, [sendCommand]);
 
   // ---------- WebSocket MEJORADO ----------
   const ensureWebSocket = useCallback(() => {
@@ -540,11 +763,39 @@ export default function RemoteSupport() {
       dataChannel.onopen = () => {
         log('✅ Canal de control remoto (iniciado) listo');
         setControlEnabled(true);
+        
+        // Solicitar información de resolución al conectar
+        setTimeout(() => {
+          sendCommand({
+            type: 'getResolution'
+          });
+        }, 1000);
       };
 
       dataChannel.onclose = () => {
         log('🔌 Canal de control remoto cerrado');
         setControlEnabled(false);
+      };
+
+      dataChannel.onerror = (error) => {
+        log(`❌ Error en canal de control: ${error}`);
+        setControlEnabled(false);
+      };
+
+      // Escuchar mensajes del agente (como la resolución)
+      dataChannel.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'resolution') {
+            setScreenResolution({
+              width: data.width,
+              height: data.height
+            });
+            log(`📏 Resolución detectada: ${data.width}x${data.height}`);
+          }
+        } catch (error) {
+          console.error('Error procesando mensaje del agente:', error);
+        }
       };
 
       const answer = await pcRef.current.createAnswer();
@@ -758,42 +1009,15 @@ export default function RemoteSupport() {
               )}
 
               {/* Video preview */}
-              <Box sx={{ position: 'relative', width: '100%', mt: 2, overflow: 'auto' }}>
-                <video
-                  ref={remoteVideoRef}
-                  autoPlay
-                  playsInline
-                  muted
-                  style={{ 
-                  width: '100%',
-                  height: 'auto',
-                  minHeight: '100%',
-                  borderRadius: 8, 
-                  border: "2px solid #143a66",
-                  display: status === "connected" ? "block" : "none",
-                  backgroundColor: "#000",
-                  cursor: controlEnabled ? 'crosshair' : 'default',
-                  objectFit: 'contain'
-
-                  }}
+              <Box sx={{ position: 'relative', width: '100%', mt: 2, height: 400 }}>
+                <VideoWithOverlay 
+                  videoRef={remoteVideoRef}
+                  isFullView={false}
+                  status={status}
+                  controlEnabled={controlEnabled}
+                  screenResolution={screenResolution}
+                  videoDimensions={videoDimensionsRef.current}
                 />
-                
-                {status === "connected" && (
-                  <Box sx={{ 
-                    position: 'absolute', 
-                    top: 8, 
-                    right: 8, 
-                    bgcolor: 'rgba(0,0,0,0.7)', 
-                    color: controlEnabled ? '#4caf50' : '#f44336',
-                    px: 2, 
-                    py: 1, 
-                    borderRadius: 2,
-                    fontSize: '0.8rem',
-                    fontWeight: 'bold'
-                  }}>
-                    {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
-                  </Box>
-                )}
               </Box>
 
               {message && (
@@ -891,26 +1115,21 @@ export default function RemoteSupport() {
 
           {/* Video en pantalla completa */}
           <Box sx={{
-          flex: 1,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'flex-start', // Cambia a flex-start
-          paddingTop: '70px',
-          paddingBottom: '30px',
-          overflow: 'auto' // Mantiene el scroll
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'flex-start',
+            paddingTop: '70px',
+            paddingBottom: '30px',
+            overflow: 'auto'
           }}>
-            <video
-            ref={fullViewVideoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ 
-              width: '98%',       // Cambia de '100%' a 'auto'
-              height: '98%',      // Mantiene la altura completa
-              maxWidth: '100%',    // Añade esto para que no se salga de la pantalla
-              objectFit: 'contain', // Mantiene 'contain' para ver todo
-              cursor: controlEnabled ? 'crosshair' : 'default'
-              }}
+            <VideoWithOverlay 
+              videoRef={fullViewVideoRef}
+              isFullView={true}
+              status={status}
+              controlEnabled={controlEnabled}
+              screenResolution={screenResolution}
+              videoDimensions={videoDimensionsRef.current}
             />
           </Box>
 
