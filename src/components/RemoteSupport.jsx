@@ -25,6 +25,79 @@ const RTC_CONFIG = {
   ],
 };
 
+// Componente simple para el input de código - SOLO VISUAL
+const CodeInput = ({ value, onChange, disabled }) => {
+  const formatDisplay = (code) => {
+    if (!code) return '';
+    const clean = code.replace(/-/g, '');
+    if (clean.length <= 3) return clean;
+    if (clean.length <= 6) return `${clean.slice(0, 3)}-${clean.slice(3)}`;
+    return `${clean.slice(0, 3)}-${clean.slice(3, 6)}-${clean.slice(6, 9)}`;
+  };
+
+  const handleChange = (e) => {
+    let input = e.target.value;
+    // Permitir solo letras y números, máximo 11 caracteres (9 dígitos + 2 guiones)
+    input = input.replace(/[^a-zA-Z0-9-]/g, '');
+    
+    // Si el usuario está borrando, permitirlo
+    if (input.length < value.length) {
+      onChange(input);
+      return;
+    }
+    
+    // Autoformatear mientras escribe
+    const clean = input.replace(/-/g, '');
+    if (clean.length > 9) return; // Máximo 9 caracteres
+    
+    let formatted = clean;
+    if (clean.length > 6) {
+      formatted = `${clean.slice(0, 3)}-${clean.slice(3, 6)}-${clean.slice(6, 9)}`;
+    } else if (clean.length > 3) {
+      formatted = `${clean.slice(0, 3)}-${clean.slice(3, 6)}`;
+    }
+    
+    onChange(formatted);
+  };
+
+  return (
+    <TextField
+      label="Código de sesión (XXX-XXX-XXX)"
+      variant="outlined"
+      fullWidth
+      value={formatDisplay(value)}
+      onChange={handleChange}
+      disabled={disabled}
+      inputProps={{
+        style: { 
+          textAlign: 'center', 
+          fontSize: '1.2rem',
+          fontWeight: 'bold',
+          letterSpacing: '2px',
+          color: '#ffffff'
+        },
+        maxLength: 11 // 9 dígitos + 2 guiones
+      }}
+      sx={{
+        '& .MuiOutlinedInput-root': {
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
+          '& fieldset': {
+            borderColor: '#4fc3f7',
+            borderWidth: 2,
+          },
+          '&:hover fieldset': {
+            borderColor: '#ffffff',
+          },
+          '&.Mui-focused fieldset': {
+            borderColor: '#4fc3f7',
+            borderWidth: 3,
+          },
+        }
+      }}
+    />
+  );
+};
+
 export default function RemoteSupport() {
   const [role, setRole] = useState("tecnico");
   const [sessionCode, setSessionCode] = useState("");
@@ -487,12 +560,9 @@ export default function RemoteSupport() {
                 Ingresa el código que te proporcionó el cliente
               </Typography>
               
-              <TextField
-                label="Código de sesión"
-                variant="outlined"
-                fullWidth
+              <CodeInput
                 value={sessionCode}
-                onChange={(e) => setSessionCode(e.target.value)}
+                onChange={setSessionCode}
                 disabled={status === "pending" || status === "connected"}
               />
 
