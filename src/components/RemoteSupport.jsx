@@ -208,7 +208,7 @@ const VideoWithOverlay = ({ videoRef, isFullView, status, controlEnabled, screen
         muted
         style={{ 
           width: '100%',
-          height: isFullView ? '100%' : 'auto',
+          height: isFullView ? '95%' : 'auto',
           borderRadius: 8, 
           border: "2px solid #143a66",
           display: status === "connected" ? "block" : "none",
@@ -1009,7 +1009,15 @@ export default function RemoteSupport() {
               )}
 
               {/* Video preview */}
-              <Box sx={{ position: 'relative', width: '100%', mt: 2, height: 400 }}>
+                  <Box sx={{ 
+                    position: 'relative', 
+                    width: '100%', 
+                    height: '500px', // Aumenta la altura
+                    mt: 2,
+                    overflow: 'auto', // Scroll si es necesario
+                    border: status === "connected" ? "2px solid #143a66" : "none",
+                    borderRadius: 2
+                  }}>
                 <VideoWithOverlay 
                   videoRef={remoteVideoRef}
                   isFullView={false}
