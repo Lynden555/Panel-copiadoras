@@ -25,7 +25,7 @@ const RTC_CONFIG = {
   ],
 };
 
-// Componente para input de código estilo PIN con cuadritos
+// Componente para input de código estilo PIN con cuadritos solo para dígitos
 const PinCodeInput = ({ value, onChange, disabled }) => {
   const formatDisplay = (code) => {
     if (!code) return '';
@@ -60,13 +60,13 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
     onChange(formatted);
   };
 
-  // Crear array de caracteres para mostrar los cuadritos
-  const displayValue = formatDisplay(value);
-  const characters = displayValue.split('');
+  // Obtener los dígitos sin guiones para los cuadritos
+  const cleanValue = value.replace(/-/g, '');
+  const digits = cleanValue.split('');
   
-  // Asegurar que siempre tengamos 11 posiciones (9 dígitos + 2 guiones)
-  while (characters.length < 11) {
-    characters.push('');
+  // Asegurar que siempre tengamos 9 posiciones para los dígitos
+  while (digits.length < 9) {
+    digits.push('');
   }
 
   return (
@@ -87,9 +87,10 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
         sx={{ position: 'absolute' }}
       />
       
-      {/* Cuadritos visibles */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-        {characters.map((char, index) => (
+      {/* Cuadritos visibles solo para dígitos, con guiones como texto */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mb: 2 }}>
+        {/* Primer grupo: dígitos 0-2 */}
+        {digits.slice(0, 3).map((digit, index) => (
           <Box
             key={index}
             sx={{
@@ -100,7 +101,7 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: char ? 'rgba(79, 195, 247, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+              backgroundColor: digit ? 'rgba(79, 195, 247, 0.2)' : 'rgba(255, 255, 255, 0.1)',
               color: '#ffffff',
               fontSize: '1.2rem',
               fontWeight: 'bold',
@@ -119,7 +120,85 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
               }
             }}
           >
-            {char}
+            {digit}
+          </Box>
+        ))}
+        
+        {/* Guión después del primer grupo */}
+        <Typography sx={{ color: '#4fc3f7', fontSize: '1.5rem', fontWeight: 'bold', mx: 1 }}>
+          -
+        </Typography>
+        
+        {/* Segundo grupo: dígitos 3-5 */}
+        {digits.slice(3, 6).map((digit, index) => (
+          <Box
+            key={index + 3}
+            sx={{
+              width: 40,
+              height: 40,
+              border: '2px solid #4fc3f7',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: digit ? 'rgba(79, 195, 247, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: disabled ? 'default' : 'pointer',
+              transition: 'all 0.2s',
+              '&:hover': disabled ? {} : {
+                borderColor: '#ffffff',
+                backgroundColor: 'rgba(79, 195, 247, 0.3)'
+              }
+            }}
+            onClick={() => {
+              if (!disabled) {
+                const hiddenInput = document.querySelector('input[type="text"]');
+                if (hiddenInput) hiddenInput.focus();
+              }
+            }}
+          >
+            {digit}
+          </Box>
+        ))}
+        
+        {/* Guión después del segundo grupo */}
+        <Typography sx={{ color: '#4fc3f7', fontSize: '1.5rem', fontWeight: 'bold', mx: 1 }}>
+          -
+        </Typography>
+        
+        {/* Tercer grupo: dígitos 6-8 */}
+        {digits.slice(6, 9).map((digit, index) => (
+          <Box
+            key={index + 6}
+            sx={{
+              width: 40,
+              height: 40,
+              border: '2px solid #4fc3f7',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: digit ? 'rgba(79, 195, 247, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: disabled ? 'default' : 'pointer',
+              transition: 'all 0.2s',
+              '&:hover': disabled ? {} : {
+                borderColor: '#ffffff',
+                backgroundColor: 'rgba(79, 195, 247, 0.3)'
+              }
+            }}
+            onClick={() => {
+              if (!disabled) {
+                const hiddenInput = document.querySelector('input[type="text"]');
+                if (hiddenInput) hiddenInput.focus();
+              }
+            }}
+          >
+            {digit}
           </Box>
         ))}
       </Box>
@@ -131,6 +210,7 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
   );
 };
 
+// El resto del código permanece EXACTAMENTE igual...
 export default function RemoteSupport() {
   const [role, setRole] = useState("tecnico");
   const [sessionCode, setSessionCode] = useState("");
