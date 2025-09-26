@@ -758,22 +758,22 @@ export default function RemoteSupport() {
               )}
 
               {/* Video preview */}
-              <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
+              <Box sx={{ position: 'relative', width: '100%', mt: 2, overflow: 'auto' }}>
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
                   muted
                   style={{ 
-                  width: "auto",        // Cambia de '100%' a 'auto'
-                  height: "300px",      // Mantiene la altura fija
-                  maxWidth: "100%",     // Añade esto
+                  width: '100%',
+                  height: 'auto',
+                  minHeight: '100%',
                   borderRadius: 8, 
                   border: "2px solid #143a66",
                   display: status === "connected" ? "block" : "none",
                   backgroundColor: "#000",
                   cursor: controlEnabled ? 'crosshair' : 'default',
-                  objectFit: 'contain'  // Mantiene 'contain'
+                  objectFit: 'contain'
 
                   }}
                 />
@@ -896,7 +896,8 @@ export default function RemoteSupport() {
             justifyContent: 'center',
             alignItems: 'center',
             paddingTop: '70px', // Compensar por la barra de controles
-            paddingBottom: '30px'
+            paddingBottom: '30px',
+            overflow: 'auto',
           }}>
             <video
             ref={fullViewVideoRef}
@@ -904,8 +905,8 @@ export default function RemoteSupport() {
             playsInline
             muted
             style={{ 
-              width: 'auto',       // Cambia de '100%' a 'auto'
-              height: '100%',      // Mantiene la altura completa
+              width: '100%',       // Cambia de '100%' a 'auto'
+              height: 'auto',      // Mantiene la altura completa
               maxWidth: '100%',    // Añade esto para que no se salga de la pantalla
               objectFit: 'contain', // Mantiene 'contain' para ver todo
               cursor: controlEnabled ? 'crosshair' : 'default'
