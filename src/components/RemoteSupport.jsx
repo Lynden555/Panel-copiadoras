@@ -25,161 +25,6 @@ const RTC_CONFIG = {
   ],
 };
 
-// Componente para input de código con formato XXX-XXX-XXX
-const CodeInput = ({ value, onChange, disabled }) => {
-  const formatValue = (val) => {
-    // Asegurar que siempre tenga 9 caracteres para mostrar
-    const cleanVal = val.replace(/-/g, '');
-    let formatted = cleanVal.slice(0, 9);
-    
-    // Agregar guiones en las posiciones correctas
-    if (formatted.length > 6) {
-      formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6, 9)}`;
-    } else if (formatted.length > 3) {
-      formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}`;
-    }
-    
-    return formatted;
-  };
-
-  const formattedValue = formatValue(value);
-  const digits = formattedValue.split('');
-  
-  const handleChange = (digit, index) => {
-    if (!/^[a-zA-Z0-9]*$/.test(digit)) return;
-    
-    // Convertir índice visual a índice real (ignorando guiones)
-    const realIndex = index <= 3 ? index : (index <= 7 ? index - 1 : index - 2);
-    
-    const cleanValue = value.replace(/-/g, '');
-    const newDigits = cleanValue.split('');
-    
-    if (realIndex < 9) {
-      newDigits[realIndex] = digit.toUpperCase();
-      const newValue = newDigits.join('');
-      onChange(newValue.slice(0, 9)); // Limitar a 9 caracteres
-      
-      // Auto-focus siguiente input
-      if (digit && realIndex < 8) {
-        const nextVisualIndex = realIndex < 2 ? realIndex + 1 : 
-                              realIndex === 2 ? 4 : 
-                              realIndex < 5 ? realIndex + 1 : 
-                              realIndex === 5 ? 7 : realIndex + 1;
-        const nextInput = document.getElementById(`code-input-${nextVisualIndex}`);
-        if (nextInput) nextInput.focus();
-      }
-    }
-  };
-
-  const handleKeyDown = (e, index) => {
-    if (e.key === 'Backspace') {
-      const realIndex = index <= 3 ? index : (index <= 7 ? index - 1 : index - 2);
-      const cleanValue = value.replace(/-/g, '');
-      
-      if (!cleanValue[realIndex] && realIndex > 0) {
-        // Mover al input anterior
-        const prevVisualIndex = realIndex <= 3 ? realIndex - 1 : 
-                               realIndex === 4 ? 2 : 
-                               realIndex <= 7 ? realIndex - 1 : 
-                               realIndex === 8 ? 6 : realIndex - 1;
-        const prevInput = document.getElementById(`code-input-${prevVisualIndex}`);
-        if (prevInput) prevInput.focus();
-      }
-    }
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pasteData = e.clipboardData.getData('text').replace(/-/g, '').slice(0, 9).toUpperCase();
-    if (/^[a-zA-Z0-9]*$/.test(pasteData)) {
-      onChange(pasteData);
-    }
-  };
-
-  // Renderizar los inputs individuales
-  const renderInputs = () => {
-    const inputs = [];
-    let inputIndex = 0;
-    
-    for (let i = 0; i < 11; i++) {
-      if (i === 3 || i === 7) {
-        // Renderizar guión
-        inputs.push(
-          <Typography 
-            key={`dash-${i}`}
-            sx={{ 
-              color: '#4fc3f7', 
-              fontWeight: 'bold', 
-              fontSize: '2rem',
-              mx: 1
-            }}
-          >
-            -
-          </Typography>
-        );
-      } else {
-        // Renderizar input
-        const digit = digits[i] || '';
-        inputs.push(
-          <TextField
-            key={`input-${i}`}
-            id={`code-input-${i}`}
-            value={digit}
-            onChange={(e) => handleChange(e.target.value, i)}
-            onKeyDown={(e) => handleKeyDown(e, i)}
-            onPaste={handlePaste}
-            disabled={disabled}
-            inputProps={{
-              maxLength: 1,
-              style: { 
-                textAlign: 'center', 
-                fontSize: '1.5rem',
-                fontWeight: 'bold',
-                color: '#ffffff',
-                padding: '8px'
-              }
-            }}
-            sx={{
-              width: 50,
-              height: 50,
-              '& .MuiOutlinedInput-root': {
-                height: '100%',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                '& fieldset': {
-                  borderColor: '#4fc3f7',
-                  borderWidth: 2,
-                },
-                '&:hover fieldset': {
-                  borderColor: '#ffffff',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: '#4fc3f7',
-                  borderWidth: 3,
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  '& fieldset': {
-                    borderColor: '#666666',
-                  }
-                }
-              }
-            }}
-          />
-        );
-        inputIndex++;
-      }
-    }
-    
-    return inputs;
-  };
-
-  return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 2 }}>
-      {renderInputs()}
-    </Box>
-  );
-};
-
 export default function RemoteSupport() {
   const [role, setRole] = useState("tecnico");
   const [sessionCode, setSessionCode] = useState("");
@@ -516,10 +361,7 @@ export default function RemoteSupport() {
 
   // ---------- Conexión ----------
   const handleConnect = async () => {
-    // Formatear el código con guiones antes de enviarlo
-    const formattedCode = formatCodeWithDashes(sessionCode);
-    
-    if (!formattedCode.trim()) {
+    if (!sessionCode.trim()) {
       log("❌ Ingresa un código de sesión");
       return;
     }
@@ -528,7 +370,7 @@ export default function RemoteSupport() {
       const res = await fetch(`${API_BASE}/remote/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: formattedCode }),
+        body: JSON.stringify({ code: sessionCode }),
       });
       
       const data = await res.json();
@@ -537,7 +379,7 @@ export default function RemoteSupport() {
         return;
       }
 
-      log(`✅ Sesión ${formattedCode} validada`);
+      log(`✅ Sesión ${sessionCode} validada`);
       initPeerConnection();
       ensureWebSocket();
 
@@ -549,14 +391,11 @@ export default function RemoteSupport() {
   const handleClose = async () => {
     if (!sessionCode) return;
     
-    // Formatear el código con guiones para el cierre también
-    const formattedCode = formatCodeWithDashes(sessionCode);
-    
     try {
       await fetch(`${API_BASE}/remote/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: formattedCode }),
+        body: JSON.stringify({ code: sessionCode }),
       });
     } catch (err) {
       console.warn("Error cerrando sesión:", err);
@@ -569,19 +408,6 @@ export default function RemoteSupport() {
     setStatus("idle");
     setControlEnabled(false);
     log(`🔌 Sesión cerrada`);
-  };
-
-  // Función para formatear el código con guiones
-  const formatCodeWithDashes = (code) => {
-    const cleanCode = code.replace(/-/g, '');
-    if (cleanCode.length <= 3) return cleanCode;
-    if (cleanCode.length <= 6) return `${cleanCode.slice(0, 3)}-${cleanCode.slice(3)}`;
-    return `${cleanCode.slice(0, 3)}-${cleanCode.slice(3, 6)}-${cleanCode.slice(6, 9)}`;
-  };
-
-  // Función para mostrar el código formateado
-  const displayFormattedCode = (code) => {
-    return formatCodeWithDashes(code);
   };
 
   const toggleControl = () => {
@@ -658,17 +484,20 @@ export default function RemoteSupport() {
           {role === "tecnico" && (
             <>
               <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
-                Ingresa el código de 9 dígitos que te proporcionó el cliente
+                Ingresa el código que te proporcionó el cliente
               </Typography>
               
-              <CodeInput
+              <TextField
+                label="Código de sesión"
+                variant="outlined"
+                fullWidth
                 value={sessionCode}
-                onChange={setSessionCode}
+                onChange={(e) => setSessionCode(e.target.value)}
                 disabled={status === "pending" || status === "connected"}
               />
 
               {status === "idle" && (
-                <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim() || sessionCode.replace(/-/g, '').length !== 9}>
+                <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim()}>
                   Conectar a sesión
                 </Button>
               )}
@@ -690,7 +519,7 @@ export default function RemoteSupport() {
                     </Button>
                     
                     <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
-                      {displayFormattedCode(sessionCode)}
+                      {sessionCode}
                     </Typography>
                   </Box>
                 </>
