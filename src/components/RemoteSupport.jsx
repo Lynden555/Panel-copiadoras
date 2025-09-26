@@ -25,8 +25,8 @@ const RTC_CONFIG = {
   ],
 };
 
-// Componente simple para el input de código - SOLO VISUAL
-const CodeInput = ({ value, onChange, disabled }) => {
+// Componente para input de código estilo PIN con cuadritos
+const PinCodeInput = ({ value, onChange, disabled }) => {
   const formatDisplay = (code) => {
     if (!code) return '';
     const clean = code.replace(/-/g, '');
@@ -60,41 +60,74 @@ const CodeInput = ({ value, onChange, disabled }) => {
     onChange(formatted);
   };
 
+  // Crear array de caracteres para mostrar los cuadritos
+  const displayValue = formatDisplay(value);
+  const characters = displayValue.split('');
+  
+  // Asegurar que siempre tengamos 11 posiciones (9 dígitos + 2 guiones)
+  while (characters.length < 11) {
+    characters.push('');
+  }
+
   return (
-    <TextField
-      label="Código de sesión (XXX-XXX-XXX)"
-      variant="outlined"
-      fullWidth
-      value={formatDisplay(value)}
-      onChange={handleChange}
-      disabled={disabled}
-      inputProps={{
-        style: { 
-          textAlign: 'center', 
-          fontSize: '1.2rem',
-          fontWeight: 'bold',
-          letterSpacing: '2px',
-          color: '#ffffff'
-        },
-        maxLength: 11 // 9 dígitos + 2 guiones
-      }}
-      sx={{
-        '& .MuiOutlinedInput-root': {
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          '& fieldset': {
-            borderColor: '#4fc3f7',
-            borderWidth: 2,
+    <Box sx={{ textAlign: 'center' }}>
+      {/* Input oculto para capturar el teclado */}
+      <TextField
+        value={formatDisplay(value)}
+        onChange={handleChange}
+        disabled={disabled}
+        inputProps={{
+          style: { 
+            opacity: 0, 
+            position: 'absolute', 
+            pointerEvents: 'none' 
           },
-          '&:hover fieldset': {
-            borderColor: '#ffffff',
-          },
-          '&.Mui-focused fieldset': {
-            borderColor: '#4fc3f7',
-            borderWidth: 3,
-          },
-        }
-      }}
-    />
+          maxLength: 11
+        }}
+        sx={{ position: 'absolute' }}
+      />
+      
+      {/* Cuadritos visibles */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
+        {characters.map((char, index) => (
+          <Box
+            key={index}
+            sx={{
+              width: 40,
+              height: 40,
+              border: '2px solid #4fc3f7',
+              borderRadius: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: char ? 'rgba(79, 195, 247, 0.2)' : 'rgba(255, 255, 255, 0.1)',
+              color: '#ffffff',
+              fontSize: '1.2rem',
+              fontWeight: 'bold',
+              cursor: disabled ? 'default' : 'pointer',
+              transition: 'all 0.2s',
+              '&:hover': disabled ? {} : {
+                borderColor: '#ffffff',
+                backgroundColor: 'rgba(79, 195, 247, 0.3)'
+              }
+            }}
+            onClick={() => {
+              if (!disabled) {
+                // Enfocar el input oculto cuando se hace click en cualquier cuadrito
+                const hiddenInput = document.querySelector('input[type="text"]');
+                if (hiddenInput) hiddenInput.focus();
+              }
+            }}
+          >
+            {char}
+          </Box>
+        ))}
+      </Box>
+      
+      <Typography variant="body2" sx={{ color: '#9fd8ff', mt: 1 }}>
+        Ingresa el código de 9 dígitos
+      </Typography>
+    </Box>
   );
 };
 
@@ -560,14 +593,19 @@ export default function RemoteSupport() {
                 Ingresa el código que te proporcionó el cliente
               </Typography>
               
-              <CodeInput
+              <PinCodeInput
                 value={sessionCode}
                 onChange={setSessionCode}
                 disabled={status === "pending" || status === "connected"}
               />
 
               {status === "idle" && (
-                <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim()}>
+                <Button 
+                  variant="contained" 
+                  onClick={handleConnect} 
+                  disabled={!sessionCode.trim() || sessionCode.replace(/-/g, '').length !== 9}
+                  sx={{ mt: 2 }}
+                >
                   Conectar a sesión
                 </Button>
               )}
@@ -578,7 +616,7 @@ export default function RemoteSupport() {
                     {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
                   </Typography>
                   
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
                     <Button
                       variant={controlEnabled ? "contained" : "outlined"}
                       onClick={toggleControl}
@@ -598,13 +636,13 @@ export default function RemoteSupport() {
           )}
 
           {(status === "connected" || status === "pending") && (
-            <Button variant="outlined" onClick={handleClose}>
+            <Button variant="outlined" onClick={handleClose} sx={{ mt: 2 }}>
               Cerrar sesión
             </Button>
           )}
 
           {/* Video con eventos de control */}
-          <Box sx={{ position: 'relative', width: '100%' }}>
+          <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
             <video
               ref={remoteVideoRef}
               autoPlay
