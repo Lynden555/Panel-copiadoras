@@ -758,22 +758,29 @@ export default function RemoteSupport() {
               )}
 
               {/* Video preview */}
-              <Box sx={{ position: 'relative', width: '100%', mt: 2, overflow: 'auto' }}>
+                <Box sx={{ 
+                  position: 'relative', 
+                  width: '100%', 
+                  height: '500px', // Aumenta la altura
+                  mt: 2,
+                  overflow: 'auto', // Scroll si es necesario
+                  border: status === "connected" ? "2px solid #143a66" : "none",
+                  borderRadius: 2
+                }}>
                 <video
                   ref={remoteVideoRef}
                   autoPlay
                   playsInline
                   muted
                   style={{ 
-                  width: '100%',
-                  height: 'auto',
-                  minHeight: '100%',
-                  borderRadius: 8, 
-                  border: "2px solid #143a66",
-                  display: status === "connected" ? "block" : "none",
-                  backgroundColor: "#000",
-                  cursor: controlEnabled ? 'crosshair' : 'default',
-                  objectFit: 'contain'
+                    width: 'auto',        // Tamaño real del video
+                    height: 'auto',       // Tamaño real del video
+                    minWidth: '100%',     // Mínimo el ancho del contenedor
+                    minHeight: '100%',    // Mínimo la altura del contenedor
+                    objectFit: 'none',    // Sin ajuste forzado
+                    display: status === "connected" ? "block" : "none",
+                    backgroundColor: "#000",
+                    cursor: controlEnabled ? 'crosshair' : 'default'
 
                   }}
                 />
@@ -891,13 +898,13 @@ export default function RemoteSupport() {
 
           {/* Video en pantalla completa */}
           <Box sx={{
-            flex: 1,
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            paddingTop: '70px', // Compensar por la barra de controles
-            paddingBottom: '30px',
-            overflow: 'auto',
+              flex: 1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'flex-start', // Cambia a flex-start
+              paddingTop: '70px',
+              paddingBottom: '30px',
+              overflow: 'auto' // Mantiene el scroll
           }}>
             <video
             ref={fullViewVideoRef}
@@ -905,11 +912,13 @@ export default function RemoteSupport() {
             playsInline
             muted
             style={{ 
-              width: '100%',       // Cambia de '100%' a 'auto'
-              height: 'auto',      // Mantiene la altura completa
-              maxWidth: '100%',    // Añade esto para que no se salga de la pantalla
-              objectFit: 'contain', // Mantiene 'contain' para ver todo
-              cursor: controlEnabled ? 'crosshair' : 'default'
+              width: 'auto',        // Cambia a 'auto'
+              height: 'auto',       // Cambia a 'auto'  
+              maxWidth: 'none',     // Quita la restricción máxima
+              maxHeight: 'none',    // Quita la restricción máxima
+              objectFit: 'none',    // Cambia a 'none' para mostrar tamaño real
+              cursor: controlEnabled ? 'crosshair' : 'default',
+              display: 'block'      // Asegura que sea bloque
               }}
             />
           </Box>
