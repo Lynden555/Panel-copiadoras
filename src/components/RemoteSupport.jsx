@@ -35,18 +35,15 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
 
   const handleChange = (e) => {
     let input = e.target.value;
-    // Permitir solo letras y números, máximo 11 caracteres (9 dígitos + 2 guiones)
     input = input.replace(/[^a-zA-Z0-9-]/g, '');
     
-    // Si el usuario está borrando, permitirlo
     if (input.length < value.length) {
       onChange(input);
       return;
     }
     
-    // Autoformatear mientras escribe
     const clean = input.replace(/-/g, '');
-    if (clean.length > 9) return; // Máximo 9 caracteres
+    if (clean.length > 9) return;
     
     let formatted = clean;
     if (clean.length > 6) {
@@ -58,18 +55,15 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
     onChange(formatted);
   };
 
-  // Obtener los dígitos sin guiones para los cuadritos
   const cleanValue = value.replace(/-/g, '');
   const digits = cleanValue.split('');
   
-  // Asegurar que siempre tengamos 9 posiciones para los dígitos
   while (digits.length < 9) {
     digits.push('');
   }
 
   return (
     <Box sx={{ textAlign: 'center' }}>
-      {/* Input oculto para capturar el teclado */}
       <TextField
         value={formatDisplay(value)}
         onChange={handleChange}
@@ -85,9 +79,7 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
         sx={{ position: 'absolute' }}
       />
       
-      {/* Cuadritos visibles solo para dígitos, con guiones como texto */}
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1, mb: 2 }}>
-        {/* Primer grupo: dígitos 0-2 */}
         {digits.slice(0, 3).map((digit, index) => (
           <Box
             key={index}
@@ -112,7 +104,6 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
             }}
             onClick={() => {
               if (!disabled) {
-                // Enfocar el input oculto cuando se hace click en cualquier cuadrito
                 const hiddenInput = document.querySelector('input[type="text"]');
                 if (hiddenInput) hiddenInput.focus();
               }
@@ -122,12 +113,10 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
           </Box>
         ))}
         
-        {/* Guión después del primer grupo */}
         <Typography sx={{ color: '#4fc3f7', fontSize: '1.5rem', fontWeight: 'bold', mx: 1 }}>
           -
         </Typography>
         
-        {/* Segundo grupo: dígitos 3-5 */}
         {digits.slice(3, 6).map((digit, index) => (
           <Box
             key={index + 3}
@@ -161,12 +150,10 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
           </Box>
         ))}
         
-        {/* Guión después del segundo grupo */}
         <Typography sx={{ color: '#4fc3f7', fontSize: '1.5rem', fontWeight: 'bold', mx: 1 }}>
           -
         </Typography>
         
-        {/* Tercer grupo: dígitos 6-8 */}
         {digits.slice(6, 9).map((digit, index) => (
           <Box
             key={index + 6}
@@ -214,11 +201,13 @@ export default function RemoteSupport() {
   const [message, setMessage] = useState("");
   const [controlEnabled, setControlEnabled] = useState(false);
   const [isFullView, setIsFullView] = useState(false);
+  const [stream, setStream] = useState(null);
 
   const wsRef = useRef(null);
   const pcRef = useRef(null);
   const dataChannelRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const fullViewVideoRef = useRef(null);
   const codeRef = useRef("");
   const mousePressedRef = useRef(false);
 
@@ -226,33 +215,34 @@ export default function RemoteSupport() {
     codeRef.current = sessionCode;
   }, [sessionCode]);
 
-  // Función para activar vista completa en la página
+  // Sincronizar el stream entre ambos videos
+  useEffect(() => {
+    if (stream && fullViewVideoRef.current) {
+      fullViewVideoRef.current.srcObject = stream;
+    }
+  }, [stream, isFullView]);
+
   const enterFullView = useCallback(() => {
     setIsFullView(true);
-    // Ocultar scrollbars del body
     document.body.style.overflow = 'hidden';
   }, []);
 
-  // Función para salir de la vista completa
   const exitFullView = useCallback(() => {
     setIsFullView(false);
-    // Restaurar scrollbars del body
     document.body.style.overflow = 'auto';
   }, []);
 
   // Efecto para entrar en vista completa cuando se conecta
   useEffect(() => {
     if (status === "connected" && !isFullView) {
-      // Pequeño delay para asegurar que el video esté cargado
       const timer = setTimeout(() => {
         enterFullView();
-      }, 500);
+      }, 1000);
       
       return () => clearTimeout(timer);
     }
   }, [status, isFullView, enterFullView]);
 
-  // Limpiar el estilo del body cuando el componente se desmonta
   useEffect(() => {
     return () => {
       document.body.style.overflow = 'auto';
@@ -276,25 +266,24 @@ export default function RemoteSupport() {
   }, []);
 
   const handleMouseMove = useCallback((event) => {
-    if (!controlEnabled || !remoteVideoRef.current) return;
+    if (!controlEnabled) return;
 
-    const video = remoteVideoRef.current;
+    const video = isFullView ? fullViewVideoRef.current : remoteVideoRef.current;
+    if (!video) return;
+
     const rect = video.getBoundingClientRect();
-    
-    // Calcular coordenadas relativas al video
     const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
     
-    // Normalizar coordenadas (0-1)
     const normalizedX = x / rect.width;
     const normalizedY = y / rect.height;
 
     sendCommand({
       type: 'mouseMove',
-      x: Math.round(normalizedX * 1920), // Asumiendo resolución 1920x1080
+      x: Math.round(normalizedX * 1920),
       y: Math.round(normalizedY * 1080)
     });
-  }, [controlEnabled, sendCommand]);
+  }, [controlEnabled, sendCommand, isFullView]);
 
   const handleMouseDown = useCallback((event) => {
     if (!controlEnabled) return;
@@ -348,7 +337,6 @@ export default function RemoteSupport() {
   const handleKeyDown = useCallback((event) => {
     if (!controlEnabled) return;
     
-    // Prevenir comportamiento por defecto del navegador
     if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
       event.preventDefault();
     }
@@ -394,10 +382,17 @@ export default function RemoteSupport() {
       console.log("🎥 Track recibido:", event.track.kind, event.streams);
       if (event.streams && event.streams[0]) {
         log("✅ Stream de pantalla recibido");
+        const newStream = event.streams[0];
+        setStream(newStream);
+        
         if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-          setStatus("connected");
+          remoteVideoRef.current.srcObject = newStream;
         }
+        if (fullViewVideoRef.current) {
+          fullViewVideoRef.current.srcObject = newStream;
+        }
+        
+        setStatus("connected");
       }
     };
 
@@ -416,7 +411,6 @@ export default function RemoteSupport() {
       log(`🔗 Estado WebRTC: ${pc.connectionState}`);
     };
 
-    // Configurar DataChannel para control remoto
     pc.ondatachannel = (event) => {
       const channel = event.channel;
       if (channel.label === 'remoteControl') {
@@ -483,12 +477,12 @@ export default function RemoteSupport() {
       log("🔌 Desconectado del servidor");
       setStatus("closed");
       setControlEnabled(false);
+      setStream(null);
     };
 
     wsRef.current = ws;
   }, []);
 
-  // ---------- Manejo de mensajes ----------
   const handleSignalingMessage = async (data) => {
     switch (data.type) {
       case "joined":
@@ -525,7 +519,6 @@ export default function RemoteSupport() {
     }
   };
 
-  // ---------- Manejar oferta del agente ----------
   const handleOffer = async (offer) => {
     if (!pcRef.current) {
       log("❌ Conexión WebRTC no inicializada");
@@ -537,7 +530,6 @@ export default function RemoteSupport() {
       await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       log("✅ Oferta establecida - Creando respuesta...");
 
-      // Crear DataChannel para control remoto
       const dataChannel = pcRef.current.createDataChannel('remoteControl', {
         ordered: true,
         maxPacketLifeTime: 3000
@@ -555,11 +547,9 @@ export default function RemoteSupport() {
         setControlEnabled(false);
       };
 
-      // Crear respuesta
       const answer = await pcRef.current.createAnswer();
       await pcRef.current.setLocalDescription(answer);
 
-      // Enviar respuesta al agente
       wsRef.current.send(JSON.stringify({
         type: "answer",
         answer: answer,
@@ -575,7 +565,6 @@ export default function RemoteSupport() {
     }
   };
 
-  // ---------- Conexión ----------
   const handleConnect = async () => {
     if (!sessionCode.trim()) {
       log("❌ Ingresa un código de sesión");
@@ -623,7 +612,8 @@ export default function RemoteSupport() {
     
     setStatus("idle");
     setControlEnabled(false);
-    exitFullView(); // Salir de la vista completa al cerrar
+    setStream(null);
+    exitFullView();
     log(`🔌 Sesión cerrada`);
   };
 
@@ -632,30 +622,41 @@ export default function RemoteSupport() {
     log(controlEnabled ? '🔒 Control remoto deshabilitado' : '✅ Control remoto habilitado');
   };
 
-  // Event listeners para el video
+  // Event listeners para ambos videos
   useEffect(() => {
-    const video = remoteVideoRef.current;
-    if (!video) return;
+    const videos = [];
+    if (remoteVideoRef.current) videos.push(remoteVideoRef.current);
+    if (fullViewVideoRef.current) videos.push(fullViewVideoRef.current);
 
-    const events = {
-      mousemove: handleMouseMove,
-      mousedown: handleMouseDown,
-      mouseup: handleMouseUp,
-      dblclick: handleDoubleClick,
-      wheel: handleWheel,
-      contextmenu: (e) => e.preventDefault()
+    const addEventListeners = (video) => {
+      if (!video) return;
+      
+      const events = {
+        mousemove: handleMouseMove,
+        mousedown: handleMouseDown,
+        mouseup: handleMouseUp,
+        dblclick: handleDoubleClick,
+        wheel: handleWheel,
+        contextmenu: (e) => e.preventDefault()
+      };
+
+      Object.entries(events).forEach(([event, handler]) => {
+        video.addEventListener(event, handler);
+      });
+
+      return () => {
+        Object.entries(events).forEach(([event, handler]) => {
+          video.removeEventListener(event, handler);
+        });
+      };
     };
 
-    Object.entries(events).forEach(([event, handler]) => {
-      video.addEventListener(event, handler);
-    });
+    const cleanups = videos.map(video => addEventListeners(video));
 
     return () => {
-      Object.entries(events).forEach(([event, handler]) => {
-        video.removeEventListener(event, handler);
-      });
+      cleanups.forEach(cleanup => cleanup && cleanup());
     };
-  }, [handleMouseMove, handleMouseDown, handleMouseUp, handleDoubleClick, handleWheel]);
+  }, [handleMouseMove, handleMouseDown, handleMouseUp, handleDoubleClick, handleWheel, isFullView]);
 
   // Event listeners para teclado
   useEffect(() => {
@@ -675,19 +676,18 @@ export default function RemoteSupport() {
     };
   }, [controlEnabled, handleKeyDown, handleKeyUp]);
 
-  // Limpieza
   useEffect(() => {
     return () => {
       try { wsRef.current?.close(); } catch {}
       try { pcRef.current?.close(); } catch {}
       try { dataChannelRef.current?.close(); } catch {}
-      document.body.style.overflow = 'auto'; // Limpiar estilo del body
+      document.body.style.overflow = 'auto';
     };
   }, []);
 
   return (
     <>
-      {/* Vista normal (cuando no está en pantalla completa) */}
+      {/* Vista normal */}
       {!isFullView && (
         <Card sx={{ 
           bgcolor: "#101b3a", 
@@ -757,7 +757,7 @@ export default function RemoteSupport() {
                 </Button>
               )}
 
-              {/* Video preview pequeño */}
+              {/* Video preview */}
               <Box sx={{ position: 'relative', width: '100%', mt: 2 }}>
                 <video
                   ref={remoteVideoRef}
@@ -766,11 +766,13 @@ export default function RemoteSupport() {
                   muted
                   style={{ 
                     width: "100%", 
+                    height: "300px",
                     borderRadius: 8, 
                     border: "2px solid #143a66",
                     display: status === "connected" ? "block" : "none",
                     backgroundColor: "#000",
-                    cursor: controlEnabled ? 'crosshair' : 'default'
+                    cursor: controlEnabled ? 'crosshair' : 'default',
+                    objectFit: 'contain'
                   }}
                 />
                 
@@ -802,7 +804,7 @@ export default function RemoteSupport() {
         </Card>
       )}
 
-      {/* Vista completa (cuando está conectado) */}
+      {/* Vista completa */}
       {isFullView && (
         <Box sx={{
           position: 'fixed',
@@ -821,38 +823,43 @@ export default function RemoteSupport() {
             top: 0,
             left: 0,
             right: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
             padding: 2,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            zIndex: 10000
+            zIndex: 10000,
+            borderBottom: '1px solid #333'
           }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Typography sx={{ color: 'white', fontWeight: 'bold' }}>
+              <SupportAgentIcon sx={{ color: '#4fc3f7' }} />
+              <Typography sx={{ color: 'white', fontWeight: 'bold', fontSize: '1.1rem' }}>
                 Sesión: {sessionCode}
               </Typography>
               <Box sx={{ 
                 bgcolor: controlEnabled ? '#4caf50' : '#f44336',
                 color: 'white',
                 px: 2,
-                py: 1,
+                py: 0.5,
                 borderRadius: 1,
-                fontSize: '0.9rem',
+                fontSize: '0.8rem',
                 fontWeight: 'bold'
               }}>
                 {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
               </Box>
             </Box>
             
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               <Button
                 variant={controlEnabled ? "contained" : "outlined"}
                 onClick={toggleControl}
                 startIcon={<MouseIcon />}
                 color={controlEnabled ? "success" : "primary"}
                 size="small"
-                sx={{ color: 'white' }}
+                sx={{ 
+                  color: 'white',
+                  borderColor: controlEnabled ? '#4caf50' : '#4fc3f7'
+                }}
               >
                 {controlEnabled ? 'Desactivar Control' : 'Activar Control'}
               </Button>
@@ -863,9 +870,9 @@ export default function RemoteSupport() {
                 startIcon={<CloseIcon />}
                 color="secondary"
                 size="small"
-                sx={{ color: 'white' }}
+                sx={{ color: 'white', borderColor: '#ff9800' }}
               >
-                Salir de vista completa
+                Salir de Vista Completa
               </Button>
               
               <Button
@@ -873,8 +880,9 @@ export default function RemoteSupport() {
                 onClick={handleClose}
                 color="error"
                 size="small"
+                sx={{ ml: 1 }}
               >
-                Cerrar sesión
+                Cerrar Sesión
               </Button>
             </Box>
           </Box>
@@ -885,10 +893,11 @@ export default function RemoteSupport() {
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            paddingTop: '60px' // Compensar por la barra de controles
+            paddingTop: '70px', // Compensar por la barra de controles
+            paddingBottom: '30px'
           }}>
             <video
-              ref={remoteVideoRef}
+              ref={fullViewVideoRef}
               autoPlay
               playsInline
               muted
@@ -908,9 +917,10 @@ export default function RemoteSupport() {
               bottom: 0,
               left: 0,
               right: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
               padding: 1,
-              textAlign: 'center'
+              textAlign: 'center',
+              borderTop: '1px solid #333'
             }}>
               <Typography sx={{ color: "#b3e5fc", fontSize: 14 }}>
                 {message}
