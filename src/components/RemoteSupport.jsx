@@ -9,11 +9,18 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Box,
+  Dialog,
+  AppBar,
+  Toolbar,
+  IconButton,
 } from "@mui/material";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import PersonIcon from "@mui/icons-material/Person";
 import MouseIcon from "@mui/icons-material/Mouse";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
+import CloseIcon from "@mui/icons-material/Close";
+import FullscreenIcon from "@mui/icons-material/Fullscreen";
+import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 
 const API_BASE = "https://copias-backend-production.up.railway.app";
 const SIGNALING_URL = "wss://grapeassist.org";
@@ -31,6 +38,7 @@ export default function RemoteSupport() {
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
   const [controlEnabled, setControlEnabled] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const wsRef = useRef(null);
   const pcRef = useRef(null);
@@ -75,7 +83,7 @@ export default function RemoteSupport() {
 
     sendCommand({
       type: 'mouseMove',
-      x: Math.round(normalizedX * 1920), // Asumiendo resolución 1920x1080
+      x: Math.round(normalizedX * 1920),
       y: Math.round(normalizedY * 1080)
     });
   }, [controlEnabled, sendCommand]);
@@ -132,7 +140,6 @@ export default function RemoteSupport() {
   const handleKeyDown = useCallback((event) => {
     if (!controlEnabled) return;
     
-    // Prevenir comportamiento por defecto del navegador
     if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
       event.preventDefault();
     }
@@ -200,7 +207,6 @@ export default function RemoteSupport() {
       log(`🔗 Estado WebRTC: ${pc.connectionState}`);
     };
 
-    // Configurar DataChannel para control remoto
     pc.ondatachannel = (event) => {
       const channel = event.channel;
       if (channel.label === 'remoteControl') {
@@ -267,12 +273,12 @@ export default function RemoteSupport() {
       log("🔌 Desconectado del servidor");
       setStatus("closed");
       setControlEnabled(false);
+      setFullscreen(false);
     };
 
     wsRef.current = ws;
   }, []);
 
-  // ---------- Manejo de mensajes ----------
   const handleSignalingMessage = async (data) => {
     switch (data.type) {
       case "joined":
@@ -309,7 +315,6 @@ export default function RemoteSupport() {
     }
   };
 
-  // ---------- Manejar oferta del agente ----------
   const handleOffer = async (offer) => {
     if (!pcRef.current) {
       log("❌ Conexión WebRTC no inicializada");
@@ -321,7 +326,6 @@ export default function RemoteSupport() {
       await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       log("✅ Oferta establecida - Creando respuesta...");
 
-      // Crear DataChannel para control remoto
       const dataChannel = pcRef.current.createDataChannel('remoteControl', {
         ordered: true,
         maxPacketLifeTime: 3000
@@ -339,11 +343,9 @@ export default function RemoteSupport() {
         setControlEnabled(false);
       };
 
-      // Crear respuesta
       const answer = await pcRef.current.createAnswer();
       await pcRef.current.setLocalDescription(answer);
 
-      // Enviar respuesta al agente
       wsRef.current.send(JSON.stringify({
         type: "answer",
         answer: answer,
@@ -359,7 +361,6 @@ export default function RemoteSupport() {
     }
   };
 
-  // ---------- Conexión ----------
   const handleConnect = async () => {
     if (!sessionCode.trim()) {
       log("❌ Ingresa un código de sesión");
@@ -407,12 +408,17 @@ export default function RemoteSupport() {
     
     setStatus("idle");
     setControlEnabled(false);
+    setFullscreen(false);
     log(`🔌 Sesión cerrada`);
   };
 
   const toggleControl = () => {
     setControlEnabled(!controlEnabled);
     log(controlEnabled ? '🔒 Control remoto deshabilitado' : '✅ Control remoto habilitado');
+  };
+
+  const toggleFullscreen = () => {
+    setFullscreen(!fullscreen);
   };
 
   // Event listeners para el video
@@ -458,7 +464,6 @@ export default function RemoteSupport() {
     };
   }, [controlEnabled, handleKeyDown, handleKeyUp]);
 
-  // Limpieza
   useEffect(() => {
     return () => {
       try { wsRef.current?.close(); } catch {}
@@ -468,113 +473,210 @@ export default function RemoteSupport() {
   }, []);
 
   return (
-    <Card sx={{ bgcolor: "#101b3a", color: "white", border: "2px solid #143a66", borderRadius: "16px", maxWidth: 900, mx: "auto", mt: 4 }}>
-      <CardContent sx={{ p: 3 }}>
-        <Stack spacing={3} alignItems="center">
-          <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
-          <Typography variant="h6" sx={{ fontWeight: 800, color: "#4fc3f7" }}>
-            Técnico - Asistencia Remota
-          </Typography>
-
-          <ToggleButtonGroup value={role} exclusive onChange={(e, newRole) => newRole && setRole(newRole)}>
-            <ToggleButton value="cliente"><PersonIcon sx={{ mr: 1 }} /> Cliente</ToggleButton>
-            <ToggleButton value="tecnico"><SupportAgentIcon sx={{ mr: 1 }} /> Técnico</ToggleButton>
-          </ToggleButtonGroup>
-
-          {role === "tecnico" && (
-            <>
-              <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
-                Ingresa el código que te proporcionó el cliente
-              </Typography>
-              
-              <TextField
-                label="Código de sesión"
-                variant="outlined"
-                fullWidth
-                value={sessionCode}
-                onChange={(e) => setSessionCode(e.target.value)}
-                disabled={status === "pending" || status === "connected"}
-              />
-
-              {status === "idle" && (
-                <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim()}>
-                  Conectar a sesión
-                </Button>
-              )}
-
-              {(status === "pending" || status === "connected") && (
-                <>
-                  <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
-                    {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Button
-                      variant={controlEnabled ? "contained" : "outlined"}
-                      onClick={toggleControl}
-                      startIcon={<MouseIcon />}
-                      color={controlEnabled ? "success" : "primary"}
-                    >
-                      {controlEnabled ? 'Control Activo' : 'Activar Control'}
-                    </Button>
-                    
-                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
-                      {sessionCode}
-                    </Typography>
-                  </Box>
-                </>
-              )}
-            </>
-          )}
-
-          {(status === "connected" || status === "pending") && (
-            <Button variant="outlined" onClick={handleClose}>
-              Cerrar sesión
-            </Button>
-          )}
-
-          {/* Video con eventos de control */}
-          <Box sx={{ position: 'relative', width: '100%' }}>
-            <video
-              ref={remoteVideoRef}
-              autoPlay
-              playsInline
-              muted
-              style={{ 
-                width: "100%", 
-                borderRadius: 8, 
-                border: "2px solid #143a66",
-                display: status === "connected" ? "block" : "none",
-                backgroundColor: "#000",
-                cursor: controlEnabled ? 'crosshair' : 'default'
-              }}
-            />
-            
-            {status === "connected" && (
-              <Box sx={{ 
-                position: 'absolute', 
-                top: 8, 
-                right: 8, 
-                bgcolor: 'rgba(0,0,0,0.7)', 
-                color: controlEnabled ? '#4caf50' : '#f44336',
-                px: 2, 
-                py: 1, 
-                borderRadius: 2,
-                fontSize: '0.8rem',
-                fontWeight: 'bold'
-              }}>
-                {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
-              </Box>
-            )}
-          </Box>
-
-          {message && (
-            <Typography sx={{ mt: 1, color: "#b3e5fc", fontSize: 14, textAlign: "center" }}>
-              {message}
+    <>
+      <Card sx={{ 
+        bgcolor: "#101b3a", 
+        color: "white", 
+        border: "2px solid #143a66", 
+        borderRadius: "16px", 
+        maxWidth: 900, 
+        mx: "auto", 
+        mt: 4,
+        display: fullscreen ? 'none' : 'block'
+      }}>
+        <CardContent sx={{ p: 3 }}>
+          <Stack spacing={3} alignItems="center">
+            <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
+            <Typography variant="h6" sx={{ fontWeight: 800, color: "#4fc3f7" }}>
+              Técnico - Asistencia Remota
             </Typography>
+
+            <ToggleButtonGroup value={role} exclusive onChange={(e, newRole) => newRole && setRole(newRole)}>
+              <ToggleButton value="cliente"><PersonIcon sx={{ mr: 1 }} /> Cliente</ToggleButton>
+              <ToggleButton value="tecnico"><SupportAgentIcon sx={{ mr: 1 }} /> Técnico</ToggleButton>
+            </ToggleButtonGroup>
+
+            {role === "tecnico" && (
+              <>
+                <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
+                  Ingresa el código que te proporcionó el cliente
+                </Typography>
+                
+                <TextField
+                  label="Código de sesión"
+                  variant="outlined"
+                  fullWidth
+                  value={sessionCode}
+                  onChange={(e) => setSessionCode(e.target.value)}
+                  disabled={status === "pending" || status === "connected"}
+                />
+
+                {status === "idle" && (
+                  <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim()}>
+                    Conectar a sesión
+                  </Button>
+                )}
+
+                {(status === "pending" || status === "connected") && (
+                  <>
+                    <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
+                      {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <Button
+                        variant={controlEnabled ? "contained" : "outlined"}
+                        onClick={toggleControl}
+                        startIcon={<MouseIcon />}
+                        color={controlEnabled ? "success" : "primary"}
+                      >
+                        {controlEnabled ? 'Control Activo' : 'Activar Control'}
+                      </Button>
+                      
+                      <Button
+                        variant="outlined"
+                        onClick={toggleFullscreen}
+                        startIcon={<FullscreenIcon />}
+                        color="secondary"
+                      >
+                        Pantalla Completa
+                      </Button>
+                      
+                      <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+                        {sessionCode}
+                      </Typography>
+                    </Box>
+                  </>
+                )}
+              </>
+            )}
+
+            {(status === "connected" || status === "pending") && (
+              <Button variant="outlined" onClick={handleClose}>
+                Cerrar sesión
+              </Button>
+            )}
+
+            {/* Video con eventos de control */}
+            <Box sx={{ position: 'relative', width: '100%', minHeight: 300 }}>
+              <video
+                ref={remoteVideoRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ 
+                  width: "100%", 
+                  height: status === "connected" ? "400px" : "auto",
+                  borderRadius: 8, 
+                  border: "2px solid #143a66",
+                  display: status === "connected" ? "block" : "none",
+                  backgroundColor: "#000",
+                  cursor: controlEnabled ? 'crosshair' : 'default',
+                  objectFit: 'contain'
+                }}
+              />
+              
+              {status === "connected" && (
+                <Box sx={{ 
+                  position: 'absolute', 
+                  top: 8, 
+                  right: 8, 
+                  bgcolor: 'rgba(0,0,0,0.7)', 
+                  color: controlEnabled ? '#4caf50' : '#f44336',
+                  px: 2, 
+                  py: 1, 
+                  borderRadius: 2,
+                  fontSize: '0.8rem',
+                  fontWeight: 'bold'
+                }}>
+                  {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
+                </Box>
+              )}
+            </Box>
+
+            {message && (
+              <Typography sx={{ mt: 1, color: "#b3e5fc", fontSize: 14, textAlign: "center" }}>
+                {message}
+              </Typography>
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
+
+      {/* Dialog para pantalla completa */}
+      <Dialog
+        fullScreen
+        open={fullscreen}
+        onClose={toggleFullscreen}
+        sx={{ '& .MuiDialog-paper': { backgroundColor: '#000' } }}
+      >
+        <AppBar sx={{ position: 'relative', bgcolor: '#101b3a' }}>
+          <Toolbar>
+            <IconButton
+              edge="start"
+              color="inherit"
+              onClick={toggleFullscreen}
+              aria-label="close"
+            >
+              <FullscreenExitIcon />
+            </IconButton>
+            <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
+              Sesión: {sessionCode} - {controlEnabled ? 'Control Activo' : 'Control Inactivo'}
+            </Typography>
+            <Button 
+              variant={controlEnabled ? "contained" : "outlined"} 
+              onClick={toggleControl}
+              startIcon={<MouseIcon />}
+              color={controlEnabled ? "success" : "inherit"}
+              sx={{ mr: 2 }}
+            >
+              {controlEnabled ? 'Desactivar Control' : 'Activar Control'}
+            </Button>
+            <Button autoFocus color="error" variant="contained" onClick={handleClose}>
+              Cerrar Sesión
+            </Button>
+          </Toolbar>
+        </AppBar>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: 'calc(100vh - 64px)',
+          backgroundColor: '#000'
+        }}>
+          <video
+            ref={remoteVideoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{ 
+              width: '100%',
+              height: '100%',
+              maxWidth: '100%',
+              maxHeight: '100%',
+              objectFit: 'contain',
+              cursor: controlEnabled ? 'crosshair' : 'default'
+            }}
+          />
+          {controlEnabled && (
+            <Box sx={{ 
+              position: 'absolute', 
+              bottom: 20, 
+              left: '50%', 
+              transform: 'translateX(-50%)',
+              bgcolor: 'rgba(0,0,0,0.7)', 
+              color: '#4caf50',
+              px: 3, 
+              py: 1, 
+              borderRadius: 2,
+              fontSize: '1rem',
+              fontWeight: 'bold'
+            }}>
+              🟢 CONTROL REMOTO ACTIVO - Puede usar mouse y teclado
+            </Box>
           )}
-        </Stack>
-      </CardContent>
-    </Card>
+        </Box>
+      </Dialog>
+    </>
   );
 }
