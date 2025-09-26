@@ -985,14 +985,6 @@ export default function RemoteSupport() {
                     </Typography>
                     
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
-                      <Button
-                        variant={controlEnabled ? "contained" : "outlined"}
-                        onClick={toggleControl}
-                        startIcon={<MouseIcon />}
-                        color={controlEnabled ? "success" : "primary"}
-                      >
-                        {controlEnabled ? 'Control Activo' : 'Activar Control'}
-                      </Button>
                       
                       <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
                         {sessionCode}
