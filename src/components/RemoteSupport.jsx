@@ -6,12 +6,9 @@ import {
   Stack,
   Card,
   CardContent,
-  ToggleButton,
-  ToggleButtonGroup,
   Box,
 } from "@mui/material";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
-import PersonIcon from "@mui/icons-material/Person";
 import MouseIcon from "@mui/icons-material/Mouse";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
 
@@ -21,7 +18,7 @@ const SIGNALING_URL = "wss://grapeassist.org";
 const RTC_CONFIG = {
   iceServers: [
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:global.stun.twilio.com:3478" }
+    { urls: "stun:stun.twilio.com:3478" }
   ],
 };
 
@@ -210,13 +207,13 @@ const PinCodeInput = ({ value, onChange, disabled }) => {
   );
 };
 
-// El resto del código permanece EXACTAMENTE igual...
 export default function RemoteSupport() {
-  const [role, setRole] = useState("tecnico");
+  // Eliminamos el estado de role ya que siempre será técnico
   const [sessionCode, setSessionCode] = useState("");
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
   const [controlEnabled, setControlEnabled] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const wsRef = useRef(null);
   const pcRef = useRef(null);
@@ -228,6 +225,49 @@ export default function RemoteSupport() {
   useEffect(() => {
     codeRef.current = sessionCode;
   }, [sessionCode]);
+
+  // Función para activar pantalla completa
+  const enterFullscreen = useCallback(() => {
+    const videoElement = remoteVideoRef.current;
+    if (videoElement) {
+      if (videoElement.requestFullscreen) {
+        videoElement.requestFullscreen();
+      } else if (videoElement.webkitRequestFullscreen) {
+        videoElement.webkitRequestFullscreen();
+      } else if (videoElement.msRequestFullscreen) {
+        videoElement.msRequestFullscreen();
+      }
+    }
+  }, []);
+
+  // Efecto para manejar cambios en pantalla completa
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('msfullscreenchange', handleFullscreenChange);
+    };
+  }, []);
+
+  // Efecto para entrar en pantalla completa cuando se conecta
+  useEffect(() => {
+    if (status === "connected" && !isFullscreen) {
+      // Pequeño delay para asegurar que el video esté cargado
+      const timer = setTimeout(() => {
+        enterFullscreen();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [status, isFullscreen, enterFullscreen]);
 
   const log = (txt) => {
     console.log(txt);
@@ -662,58 +702,52 @@ export default function RemoteSupport() {
             Técnico - Asistencia Remota
           </Typography>
 
-          <ToggleButtonGroup value={role} exclusive onChange={(e, newRole) => newRole && setRole(newRole)}>
-            <ToggleButton value="cliente"><PersonIcon sx={{ mr: 1 }} /> Cliente</ToggleButton>
-            <ToggleButton value="tecnico"><SupportAgentIcon sx={{ mr: 1 }} /> Técnico</ToggleButton>
-          </ToggleButtonGroup>
+          {/* Eliminamos el ToggleButtonGroup y mostramos solo el contenido para técnico */}
+          <>
+            <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
+              Ingresa el código que te proporcionó el cliente
+            </Typography>
+            
+            <PinCodeInput
+              value={sessionCode}
+              onChange={setSessionCode}
+              disabled={status === "pending" || status === "connected"}
+            />
 
-          {role === "tecnico" && (
-            <>
-              <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
-                Ingresa el código que te proporcionó el cliente
-              </Typography>
-              
-              <PinCodeInput
-                value={sessionCode}
-                onChange={setSessionCode}
-                disabled={status === "pending" || status === "connected"}
-              />
+            {status === "idle" && (
+              <Button 
+                variant="contained" 
+                onClick={handleConnect} 
+                disabled={!sessionCode.trim() || sessionCode.replace(/-/g, '').length !== 9}
+                sx={{ mt: 2 }}
+              >
+                Conectar a sesión
+              </Button>
+            )}
 
-              {status === "idle" && (
-                <Button 
-                  variant="contained" 
-                  onClick={handleConnect} 
-                  disabled={!sessionCode.trim() || sessionCode.replace(/-/g, '').length !== 9}
-                  sx={{ mt: 2 }}
-                >
-                  Conectar a sesión
-                </Button>
-              )}
-
-              {(status === "pending" || status === "connected") && (
-                <>
-                  <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
-                    {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
-                  </Typography>
+            {(status === "pending" || status === "connected") && (
+              <>
+                <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
+                  {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
+                </Typography>
+                
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
+                  <Button
+                    variant={controlEnabled ? "contained" : "outlined"}
+                    onClick={toggleControl}
+                    startIcon={<MouseIcon />}
+                    color={controlEnabled ? "success" : "primary"}
+                  >
+                    {controlEnabled ? 'Control Activo' : 'Activar Control'}
+                  </Button>
                   
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 2 }}>
-                    <Button
-                      variant={controlEnabled ? "contained" : "outlined"}
-                      onClick={toggleControl}
-                      startIcon={<MouseIcon />}
-                      color={controlEnabled ? "success" : "primary"}
-                    >
-                      {controlEnabled ? 'Control Activo' : 'Activar Control'}
-                    </Button>
-                    
-                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
-                      {sessionCode}
-                    </Typography>
-                  </Box>
-                </>
-              )}
-            </>
-          )}
+                  <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+                    {sessionCode}
+                  </Typography>
+                </Box>
+              </>
+            )}
+          </>
 
           {(status === "connected" || status === "pending") && (
             <Button variant="outlined" onClick={handleClose} sx={{ mt: 2 }}>
@@ -752,6 +786,7 @@ export default function RemoteSupport() {
                 fontWeight: 'bold'
               }}>
                 {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
+                {isFullscreen && ' • PANTALLA COMPLETA'}
               </Box>
             )}
           </Box>
