@@ -9,18 +9,11 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Box,
-  Dialog,
-  AppBar,
-  Toolbar,
-  IconButton,
 } from "@mui/material";
 import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 import PersonIcon from "@mui/icons-material/Person";
 import MouseIcon from "@mui/icons-material/Mouse";
 import KeyboardIcon from "@mui/icons-material/Keyboard";
-import CloseIcon from "@mui/icons-material/Close";
-import FullscreenIcon from "@mui/icons-material/Fullscreen";
-import FullscreenExitIcon from "@mui/icons-material/FullscreenExit";
 
 const API_BASE = "https://copias-backend-production.up.railway.app";
 const SIGNALING_URL = "wss://grapeassist.org";
@@ -34,37 +27,64 @@ const RTC_CONFIG = {
 
 // Componente para input de código con formato XXX-XXX-XXX
 const CodeInput = ({ value, onChange, disabled }) => {
-  // Remover guiones para el valor real
-  const cleanValue = value.replace(/-/g, '');
-  const digits = cleanValue.split('');
-  
-  // Asegurar que siempre tengamos 9 dígitos para mostrar
-  while (digits.length < 9) digits.push('');
+  const formatValue = (val) => {
+    // Asegurar que siempre tenga 9 caracteres para mostrar
+    const cleanVal = val.replace(/-/g, '');
+    let formatted = cleanVal.slice(0, 9);
+    
+    // Agregar guiones en las posiciones correctas
+    if (formatted.length > 6) {
+      formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}-${formatted.slice(6, 9)}`;
+    } else if (formatted.length > 3) {
+      formatted = `${formatted.slice(0, 3)}-${formatted.slice(3, 6)}`;
+    }
+    
+    return formatted;
+  };
+
+  const formattedValue = formatValue(value);
+  const digits = formattedValue.split('');
   
   const handleChange = (digit, index) => {
     if (!/^[a-zA-Z0-9]*$/.test(digit)) return;
     
-    const newDigits = [...digits];
-    newDigits[index] = digit.toUpperCase();
+    // Convertir índice visual a índice real (ignorando guiones)
+    const realIndex = index <= 3 ? index : (index <= 7 ? index - 1 : index - 2);
     
-    // Unir los dígitos y agregar guiones en las posiciones correctas
-    let newValue = newDigits.join('');
-    if (newValue.length > 3) newValue = newValue.slice(0, 3) + '-' + newValue.slice(3);
-    if (newValue.length > 7) newValue = newValue.slice(0, 7) + '-' + newValue.slice(7);
+    const cleanValue = value.replace(/-/g, '');
+    const newDigits = cleanValue.split('');
     
-    onChange(newValue.replace(/-/g, '')); // Guardar sin guiones
-    
-    // Auto-focus siguiente input
-    if (digit && index < 8) {
-      const nextInput = document.getElementById(`code-input-${index + 1}`);
-      if (nextInput) nextInput.focus();
+    if (realIndex < 9) {
+      newDigits[realIndex] = digit.toUpperCase();
+      const newValue = newDigits.join('');
+      onChange(newValue.slice(0, 9)); // Limitar a 9 caracteres
+      
+      // Auto-focus siguiente input
+      if (digit && realIndex < 8) {
+        const nextVisualIndex = realIndex < 2 ? realIndex + 1 : 
+                              realIndex === 2 ? 4 : 
+                              realIndex < 5 ? realIndex + 1 : 
+                              realIndex === 5 ? 7 : realIndex + 1;
+        const nextInput = document.getElementById(`code-input-${nextVisualIndex}`);
+        if (nextInput) nextInput.focus();
+      }
     }
   };
 
   const handleKeyDown = (e, index) => {
-    if (e.key === 'Backspace' && !digits[index] && index > 0) {
-      const prevInput = document.getElementById(`code-input-${index - 1}`);
-      if (prevInput) prevInput.focus();
+    if (e.key === 'Backspace') {
+      const realIndex = index <= 3 ? index : (index <= 7 ? index - 1 : index - 2);
+      const cleanValue = value.replace(/-/g, '');
+      
+      if (!cleanValue[realIndex] && realIndex > 0) {
+        // Mover al input anterior
+        const prevVisualIndex = realIndex <= 3 ? realIndex - 1 : 
+                               realIndex === 4 ? 2 : 
+                               realIndex <= 7 ? realIndex - 1 : 
+                               realIndex === 8 ? 6 : realIndex - 1;
+        const prevInput = document.getElementById(`code-input-${prevVisualIndex}`);
+        if (prevInput) prevInput.focus();
+      }
     }
   };
 
@@ -76,70 +96,86 @@ const CodeInput = ({ value, onChange, disabled }) => {
     }
   };
 
-  // Función para renderizar los grupos de inputs
-  const renderInputGroup = (start, end) => {
-    return (
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        {Array.from({ length: end - start + 1 }, (_, i) => {
-          const index = start + i;
-          return (
-            <TextField
-              key={index}
-              id={`code-input-${index}`}
-              value={digits[index] || ''}
-              onChange={(e) => handleChange(e.target.value, index)}
-              onKeyDown={(e) => handleKeyDown(e, index)}
-              onPaste={handlePaste}
-              disabled={disabled}
-              inputProps={{
-                maxLength: 1,
-                style: { 
-                  textAlign: 'center', 
-                  fontSize: '2rem',
-                  fontWeight: 'bold',
-                  color: '#ffffff',
-                  padding: '10px'
-                }
-              }}
-              sx={{
-                width: 60,
-                height: 60,
-                '& .MuiOutlinedInput-root': {
-                  height: '100%',
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  // Renderizar los inputs individuales
+  const renderInputs = () => {
+    const inputs = [];
+    let inputIndex = 0;
+    
+    for (let i = 0; i < 11; i++) {
+      if (i === 3 || i === 7) {
+        // Renderizar guión
+        inputs.push(
+          <Typography 
+            key={`dash-${i}`}
+            sx={{ 
+              color: '#4fc3f7', 
+              fontWeight: 'bold', 
+              fontSize: '2rem',
+              mx: 1
+            }}
+          >
+            -
+          </Typography>
+        );
+      } else {
+        // Renderizar input
+        const digit = digits[i] || '';
+        inputs.push(
+          <TextField
+            key={`input-${i}`}
+            id={`code-input-${i}`}
+            value={digit}
+            onChange={(e) => handleChange(e.target.value, i)}
+            onKeyDown={(e) => handleKeyDown(e, i)}
+            onPaste={handlePaste}
+            disabled={disabled}
+            inputProps={{
+              maxLength: 1,
+              style: { 
+                textAlign: 'center', 
+                fontSize: '1.5rem',
+                fontWeight: 'bold',
+                color: '#ffffff',
+                padding: '8px'
+              }
+            }}
+            sx={{
+              width: 50,
+              height: 50,
+              '& .MuiOutlinedInput-root': {
+                height: '100%',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                '& fieldset': {
+                  borderColor: '#4fc3f7',
+                  borderWidth: 2,
+                },
+                '&:hover fieldset': {
+                  borderColor: '#ffffff',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#4fc3f7',
+                  borderWidth: 3,
+                },
+                '&.Mui-disabled': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   '& fieldset': {
-                    borderColor: '#4fc3f7',
-                    borderWidth: 2,
-                  },
-                  '&:hover fieldset': {
-                    borderColor: '#ffffff',
-                  },
-                  '&.Mui-focused fieldset': {
-                    borderColor: '#4fc3f7',
-                    borderWidth: 3,
-                  },
-                  '&.Mui-disabled': {
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    '& fieldset': {
-                      borderColor: '#666666',
-                    }
+                    borderColor: '#666666',
                   }
                 }
-              }}
-            />
-          );
-        })}
-      </Box>
-    );
+              }
+            }}
+          />
+        );
+        inputIndex++;
+      }
+    }
+    
+    return inputs;
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', my: 2 }}>
-      {renderInputGroup(0, 2)}
-      <Typography variant="h4" sx={{ color: '#4fc3f7', fontWeight: 'bold' }}>-</Typography>
-      {renderInputGroup(3, 5)}
-      <Typography variant="h4" sx={{ color: '#4fc3f7', fontWeight: 'bold' }}>-</Typography>
-      {renderInputGroup(6, 8)}
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', my: 2 }}>
+      {renderInputs()}
     </Box>
   );
 };
@@ -150,7 +186,6 @@ export default function RemoteSupport() {
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("");
   const [controlEnabled, setControlEnabled] = useState(false);
-  const [fullscreen, setFullscreen] = useState(false);
 
   const wsRef = useRef(null);
   const pcRef = useRef(null);
@@ -185,15 +220,17 @@ export default function RemoteSupport() {
     const video = remoteVideoRef.current;
     const rect = video.getBoundingClientRect();
     
+    // Calcular coordenadas relativas al video
     const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
     const y = Math.max(0, Math.min(event.clientY - rect.top, rect.height));
     
+    // Normalizar coordenadas (0-1)
     const normalizedX = x / rect.width;
     const normalizedY = y / rect.height;
 
     sendCommand({
       type: 'mouseMove',
-      x: Math.round(normalizedX * 1920),
+      x: Math.round(normalizedX * 1920), // Asumiendo resolución 1920x1080
       y: Math.round(normalizedY * 1080)
     });
   }, [controlEnabled, sendCommand]);
@@ -250,6 +287,7 @@ export default function RemoteSupport() {
   const handleKeyDown = useCallback((event) => {
     if (!controlEnabled) return;
     
+    // Prevenir comportamiento por defecto del navegador
     if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
       event.preventDefault();
     }
@@ -283,7 +321,7 @@ export default function RemoteSupport() {
     return modifiers;
   };
 
-  // ---------- WEBRTC ----------
+  // ---------- WEBRTC MEJORADO ----------
   const initPeerConnection = useCallback(() => {
     if (pcRef.current) {
       try { pcRef.current.close(); } catch {}
@@ -298,12 +336,6 @@ export default function RemoteSupport() {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = event.streams[0];
           setStatus("connected");
-          
-          // Auto pantalla completa cuando se recibe el stream
-          setTimeout(() => {
-            setFullscreen(true);
-            log("🖥️ Modo pantalla completa activado automáticamente");
-          }, 500);
         }
       }
     };
@@ -323,6 +355,7 @@ export default function RemoteSupport() {
       log(`🔗 Estado WebRTC: ${pc.connectionState}`);
     };
 
+    // Configurar DataChannel para control remoto
     pc.ondatachannel = (event) => {
       const channel = event.channel;
       if (channel.label === 'remoteControl') {
@@ -349,7 +382,7 @@ export default function RemoteSupport() {
     return pc;
   }, []);
 
-  // ---------- WebSocket ----------
+  // ---------- WebSocket MEJORADO ----------
   const ensureWebSocket = useCallback(() => {
     if (wsRef.current) {
       try { wsRef.current.close(); } catch {}
@@ -389,12 +422,12 @@ export default function RemoteSupport() {
       log("🔌 Desconectado del servidor");
       setStatus("closed");
       setControlEnabled(false);
-      setFullscreen(false);
     };
 
     wsRef.current = ws;
   }, []);
 
+  // ---------- Manejo de mensajes ----------
   const handleSignalingMessage = async (data) => {
     switch (data.type) {
       case "joined":
@@ -431,6 +464,7 @@ export default function RemoteSupport() {
     }
   };
 
+  // ---------- Manejar oferta del agente ----------
   const handleOffer = async (offer) => {
     if (!pcRef.current) {
       log("❌ Conexión WebRTC no inicializada");
@@ -442,6 +476,7 @@ export default function RemoteSupport() {
       await pcRef.current.setRemoteDescription(new RTCSessionDescription(offer));
       log("✅ Oferta establecida - Creando respuesta...");
 
+      // Crear DataChannel para control remoto
       const dataChannel = pcRef.current.createDataChannel('remoteControl', {
         ordered: true,
         maxPacketLifeTime: 3000
@@ -459,9 +494,11 @@ export default function RemoteSupport() {
         setControlEnabled(false);
       };
 
+      // Crear respuesta
       const answer = await pcRef.current.createAnswer();
       await pcRef.current.setLocalDescription(answer);
 
+      // Enviar respuesta al agente
       wsRef.current.send(JSON.stringify({
         type: "answer",
         answer: answer,
@@ -477,9 +514,13 @@ export default function RemoteSupport() {
     }
   };
 
+  // ---------- Conexión ----------
   const handleConnect = async () => {
-    if (!sessionCode.trim() || sessionCode.length !== 9) {
-      log("❌ El código debe tener 9 caracteres");
+    // Formatear el código con guiones antes de enviarlo
+    const formattedCode = formatCodeWithDashes(sessionCode);
+    
+    if (!formattedCode.trim()) {
+      log("❌ Ingresa un código de sesión");
       return;
     }
 
@@ -487,7 +528,7 @@ export default function RemoteSupport() {
       const res = await fetch(`${API_BASE}/remote/connect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: sessionCode }),
+        body: JSON.stringify({ code: formattedCode }),
       });
       
       const data = await res.json();
@@ -496,7 +537,7 @@ export default function RemoteSupport() {
         return;
       }
 
-      log(`✅ Sesión ${sessionCode} validada`);
+      log(`✅ Sesión ${formattedCode} validada`);
       initPeerConnection();
       ensureWebSocket();
 
@@ -508,11 +549,14 @@ export default function RemoteSupport() {
   const handleClose = async () => {
     if (!sessionCode) return;
     
+    // Formatear el código con guiones para el cierre también
+    const formattedCode = formatCodeWithDashes(sessionCode);
+    
     try {
       await fetch(`${API_BASE}/remote/close`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: sessionCode }),
+        body: JSON.stringify({ code: formattedCode }),
       });
     } catch (err) {
       console.warn("Error cerrando sesión:", err);
@@ -524,24 +568,25 @@ export default function RemoteSupport() {
     
     setStatus("idle");
     setControlEnabled(false);
-    setFullscreen(false);
     log(`🔌 Sesión cerrada`);
+  };
+
+  // Función para formatear el código con guiones
+  const formatCodeWithDashes = (code) => {
+    const cleanCode = code.replace(/-/g, '');
+    if (cleanCode.length <= 3) return cleanCode;
+    if (cleanCode.length <= 6) return `${cleanCode.slice(0, 3)}-${cleanCode.slice(3)}`;
+    return `${cleanCode.slice(0, 3)}-${cleanCode.slice(3, 6)}-${cleanCode.slice(6, 9)}`;
+  };
+
+  // Función para mostrar el código formateado
+  const displayFormattedCode = (code) => {
+    return formatCodeWithDashes(code);
   };
 
   const toggleControl = () => {
     setControlEnabled(!controlEnabled);
     log(controlEnabled ? '🔒 Control remoto deshabilitado' : '✅ Control remoto habilitado');
-  };
-
-  const toggleFullscreen = () => {
-    setFullscreen(!fullscreen);
-  };
-
-  // Formatear el código para mostrar con guiones
-  const formatSessionCode = (code) => {
-    if (code.length <= 3) return code;
-    if (code.length <= 6) return `${code.slice(0, 3)}-${code.slice(3)}`;
-    return `${code.slice(0, 3)}-${code.slice(3, 6)}-${code.slice(6, 9)}`;
   };
 
   // Event listeners para el video
@@ -587,6 +632,7 @@ export default function RemoteSupport() {
     };
   }, [controlEnabled, handleKeyDown, handleKeyUp]);
 
+  // Limpieza
   useEffect(() => {
     return () => {
       try { wsRef.current?.close(); } catch {}
@@ -596,305 +642,110 @@ export default function RemoteSupport() {
   }, []);
 
   return (
-    <>
-      <Card sx={{ 
-        bgcolor: "#101b3a", 
-        color: "white", 
-        border: "2px solid #143a66", 
-        borderRadius: "16px", 
-        maxWidth: 1000, 
-        mx: "auto", 
-        mt: 4,
-        display: fullscreen ? 'none' : 'block'
-      }}>
-        <CardContent sx={{ p: 4 }}>
-          <Stack spacing={3} alignItems="center">
-            <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
-            <Typography variant="h4" sx={{ fontWeight: 800, color: "#4fc3f7", textAlign: 'center' }}>
-              Técnico - Asistencia Remota
-            </Typography>
+    <Card sx={{ bgcolor: "#101b3a", color: "white", border: "2px solid #143a66", borderRadius: "16px", maxWidth: 900, mx: "auto", mt: 4 }}>
+      <CardContent sx={{ p: 3 }}>
+        <Stack spacing={3} alignItems="center">
+          <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
+          <Typography variant="h6" sx={{ fontWeight: 800, color: "#4fc3f7" }}>
+            Técnico - Asistencia Remota
+          </Typography>
 
-            <ToggleButtonGroup value={role} exclusive onChange={(e, newRole) => newRole && setRole(newRole)}>
-              <ToggleButton value="cliente"><PersonIcon sx={{ mr: 1 }} /> Cliente</ToggleButton>
-              <ToggleButton value="tecnico"><SupportAgentIcon sx={{ mr: 1 }} /> Técnico</ToggleButton>
-            </ToggleButtonGroup>
+          <ToggleButtonGroup value={role} exclusive onChange={(e, newRole) => newRole && setRole(newRole)}>
+            <ToggleButton value="cliente"><PersonIcon sx={{ mr: 1 }} /> Cliente</ToggleButton>
+            <ToggleButton value="tecnico"><SupportAgentIcon sx={{ mr: 1 }} /> Técnico</ToggleButton>
+          </ToggleButtonGroup>
 
-            {role === "tecnico" && (
-              <>
-                <Typography sx={{ color: "#9fd8ff", textAlign: "center", fontSize: '1.2rem' }}>
-                  Ingresa el código de 9 dígitos que te proporcionó el cliente
-                </Typography>
-                
-                <CodeInput 
-                  value={sessionCode} 
-                  onChange={setSessionCode}
-                  disabled={status === "pending" || status === "connected"}
-                />
-
-                {status === "idle" && (
-                  <Button 
-                    variant="contained" 
-                    onClick={handleConnect} 
-                    disabled={!sessionCode.trim() || sessionCode.length !== 9}
-                    size="large"
-                    sx={{ fontSize: '1.1rem', px: 4, py: 1 }}
-                  >
-                    Conectar a sesión
-                  </Button>
-                )}
-
-                {(status === "pending" || status === "connected") && (
-                  <>
-                    <Typography sx={{ color: "#9de6a2", fontWeight: 700, textAlign: 'center', fontSize: '1.2rem' }}>
-                      {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Conexión establecida - Pantalla compartida"}
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', mt: 2 }}>
-                      <Button
-                        variant={controlEnabled ? "contained" : "outlined"}
-                        onClick={toggleControl}
-                        startIcon={<MouseIcon />}
-                        color={controlEnabled ? "success" : "primary"}
-                        size="large"
-                        sx={{ fontSize: '1rem', px: 3 }}
-                      >
-                        {controlEnabled ? 'Control Activo' : 'Activar Control'}
-                      </Button>
-                      
-                      <Button
-                        variant="outlined"
-                        onClick={toggleFullscreen}
-                        startIcon={<FullscreenIcon />}
-                        color="secondary"
-                        size="large"
-                        sx={{ fontSize: '1rem', px: 3 }}
-                      >
-                        Pantalla Completa
-                      </Button>
-                      
-                      <Typography variant="h3" sx={{ 
-                        fontWeight: 900, 
-                        letterSpacing: 3,
-                        color: '#4fc3f7',
-                        bgcolor: 'rgba(255,255,255,0.1)',
-                        px: 4,
-                        py: 2,
-                        borderRadius: 3,
-                        border: '2px solid #4fc3f7'
-                      }}>
-                        {formatSessionCode(sessionCode)}
-                      </Typography>
-                    </Box>
-                  </>
-                )}
-              </>
-            )}
-
-            {(status === "connected" || status === "pending") && (
-              <Button variant="outlined" onClick={handleClose} size="large" sx={{ mt: 2 }}>
-                Cerrar sesión
-              </Button>
-            )}
-
-            {/* Video placeholder - Más grande */}
-            <Box sx={{ 
-              position: 'relative', 
-              width: '100%', 
-              minHeight: 400,
-              bgcolor: '#000',
-              borderRadius: 2,
-              border: '3px solid #143a66',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#666',
-              mt: 2,
-              p: 3
-            }}>
-              {status === "connected" ? (
-                <Typography variant="h6">La pantalla se muestra en modo pantalla completa para mejor visualización</Typography>
-              ) : (
-                <Typography variant="h6">La pantalla compartida aparecerá aquí en tamaño completo</Typography>
-              )}
-            </Box>
-
-            {message && (
-              <Typography sx={{ mt: 2, color: "#b3e5fc", fontSize: 16, textAlign: "center" }}>
-                {message}
+          {role === "tecnico" && (
+            <>
+              <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
+                Ingresa el código de 9 dígitos que te proporcionó el cliente
               </Typography>
-            )}
-          </Stack>
-        </CardContent>
-      </Card>
+              
+              <CodeInput
+                value={sessionCode}
+                onChange={setSessionCode}
+                disabled={status === "pending" || status === "connected"}
+              />
 
-      {/* PANTALLA COMPLETA MEJORADA */}
-      <Dialog
-        fullScreen
-        open={fullscreen}
-        onClose={toggleFullscreen}
-        sx={{ 
-          '& .MuiDialog-paper': { 
-            backgroundColor: '#000000',
-            overflow: 'hidden',
-            margin: 0,
-            padding: 0
-          } 
-        }}
-        PaperProps={{
-          style: {
-            margin: 0,
-            padding: 0,
-            minWidth: '100%',
-            minHeight: '100%'
-          }
-        }}
-      >
-        {/* Header minimalista */}
-        <AppBar 
-          sx={{ 
-            position: 'fixed', 
-            bgcolor: 'rgba(0, 0, 0, 0.8)', 
-            backdropFilter: 'blur(10px)',
-            transition: 'opacity 0.3s',
-            '&:hover': {
-              opacity: 1
-            },
-            opacity: 0.7
-          }}
-          className="controls-header"
-        >
-          <Toolbar sx={{ minHeight: '64px!important', py: 1 }}>
-            <IconButton
-              edge="start"
-              color="inherit"
-              onClick={toggleFullscreen}
-              aria-label="close"
-              size="large"
-              sx={{ mr: 2 }}
-            >
-              <FullscreenExitIcon />
-            </IconButton>
+              {status === "idle" && (
+                <Button variant="contained" onClick={handleConnect} disabled={!sessionCode.trim() || sessionCode.replace(/-/g, '').length !== 9}>
+                  Conectar a sesión
+                </Button>
+              )}
+
+              {(status === "pending" || status === "connected") && (
+                <>
+                  <Typography sx={{ color: "#9de6a2", fontWeight: 700 }}>
+                    {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Viendo pantalla remota"}
+                  </Typography>
+                  
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <Button
+                      variant={controlEnabled ? "contained" : "outlined"}
+                      onClick={toggleControl}
+                      startIcon={<MouseIcon />}
+                      color={controlEnabled ? "success" : "primary"}
+                    >
+                      {controlEnabled ? 'Control Activo' : 'Activar Control'}
+                    </Button>
+                    
+                    <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+                      {displayFormattedCode(sessionCode)}
+                    </Typography>
+                  </Box>
+                </>
+              )}
+            </>
+          )}
+
+          {(status === "connected" || status === "pending") && (
+            <Button variant="outlined" onClick={handleClose}>
+              Cerrar sesión
+            </Button>
+          )}
+
+          {/* Video con eventos de control */}
+          <Box sx={{ position: 'relative', width: '100%' }}>
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{ 
+                width: "100%", 
+                borderRadius: 8, 
+                border: "2px solid #143a66",
+                display: status === "connected" ? "block" : "none",
+                backgroundColor: "#000",
+                cursor: controlEnabled ? 'crosshair' : 'default'
+              }}
+            />
             
-            <Typography sx={{ flex: 1, fontSize: '1.2rem' }}>
-              Sesión: <strong style={{color: '#4fc3f7'}}>{formatSessionCode(sessionCode)}</strong>
-            </Typography>
-            
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            {status === "connected" && (
               <Box sx={{ 
-                bgcolor: controlEnabled ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                position: 'absolute', 
+                top: 8, 
+                right: 8, 
+                bgcolor: 'rgba(0,0,0,0.7)', 
                 color: controlEnabled ? '#4caf50' : '#f44336',
                 px: 2, 
                 py: 1, 
-                borderRadius: 1,
-                border: `1px solid ${controlEnabled ? '#4caf50' : '#f44336'}`,
+                borderRadius: 2,
+                fontSize: '0.8rem',
                 fontWeight: 'bold'
               }}>
                 {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
               </Box>
-              
-              <Button 
-                variant={controlEnabled ? "contained" : "outlined"} 
-                onClick={toggleControl}
-                startIcon={<MouseIcon />}
-                color={controlEnabled ? "success" : "inherit"}
-                size="medium"
-              >
-                {controlEnabled ? 'Desactivar' : 'Activar'}
-              </Button>
-              
-              <Button 
-                color="error" 
-                variant="contained" 
-                onClick={handleClose}
-                size="medium"
-              >
-                Cerrar
-              </Button>
-            </Box>
-          </Toolbar>
-        </AppBar>
-        
-        {/* Video en pantalla completa REAL - 100% del viewport */}
-        <Box sx={{ 
-          width: '100vw',
-          height: '100vh',
-          backgroundColor: '#000',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          margin: 0,
-          padding: 0,
-          overflow: 'hidden'
-        }}>
-          <video
-            ref={remoteVideoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ 
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-              cursor: controlEnabled ? 'crosshair' : 'default',
-              margin: 0,
-              padding: 0,
-              display: 'block'
-            }}
-          />
-          
-          {/* Overlay de información que aparece al pasar el mouse */}
-          <Box 
-            className="control-info"
-            sx={{ 
-              position: 'absolute', 
-              bottom: 80,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              bgcolor: 'rgba(0,0,0,0.9)', 
-              color: '#4fc3f7',
-              px: 4, 
-              py: 3, 
-              borderRadius: 3,
-              textAlign: 'center',
-              border: '2px solid #4fc3f7',
-              transition: 'opacity 0.3s',
-              opacity: 0,
-              '&:hover, .controls-header:hover ~ &': {
-                opacity: 1
-              }
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
-              🖱️ Control Remoto {controlEnabled ? 'ACTIVADO' : 'DESACTIVADO'}
-            </Typography>
-            {controlEnabled && (
-              <Typography sx={{ fontSize: '1rem' }}>
-                Puede usar el mouse, teclado y scroll para controlar la pantalla remota
-              </Typography>
             )}
           </Box>
-        </Box>
-      </Dialog>
 
-      <style jsx global>{`
-        .controls-header {
-          transition: opacity 0.3s ease-in-out;
-        }
-        
-        .controls-header:hover {
-          opacity: 1 !important;
-        }
-        
-        .controls-header:hover ~ .control-info {
-          opacity: 1 !important;
-        }
-        
-        body {
-          margin: 0;
-          padding: 0;
-          overflow: hidden;
-        }
-      `}</style>
-    </>
+          {message && (
+            <Typography sx={{ mt: 1, color: "#b3e5fc", fontSize: 14, textAlign: "center" }}>
+              {message}
+            </Typography>
+          )}
+        </Stack>
+      </CardContent>
+    </Card>
   );
 }
