@@ -32,21 +32,30 @@ const RTC_CONFIG = {
   ],
 };
 
-// Componente para input de código con recuadros
-const CodeInput = ({ value, onChange, length = 6, disabled }) => {
-  const digits = value.split('');
+// Componente para input de código con formato XXX-XXX-XXX
+const CodeInput = ({ value, onChange, disabled }) => {
+  // Remover guiones para el valor real
+  const cleanValue = value.replace(/-/g, '');
+  const digits = cleanValue.split('');
+  
+  // Asegurar que siempre tengamos 9 dígitos para mostrar
+  while (digits.length < 9) digits.push('');
   
   const handleChange = (digit, index) => {
     if (!/^[a-zA-Z0-9]*$/.test(digit)) return;
     
     const newDigits = [...digits];
     newDigits[index] = digit.toUpperCase();
-    const newValue = newDigits.join('');
     
-    onChange(newValue);
+    // Unir los dígitos y agregar guiones en las posiciones correctas
+    let newValue = newDigits.join('');
+    if (newValue.length > 3) newValue = newValue.slice(0, 3) + '-' + newValue.slice(3);
+    if (newValue.length > 7) newValue = newValue.slice(0, 7) + '-' + newValue.slice(7);
+    
+    onChange(newValue.replace(/-/g, '')); // Guardar sin guiones
     
     // Auto-focus siguiente input
-    if (digit && index < length - 1) {
+    if (digit && index < 8) {
       const nextInput = document.getElementById(`code-input-${index + 1}`);
       if (nextInput) nextInput.focus();
     }
@@ -61,60 +70,76 @@ const CodeInput = ({ value, onChange, length = 6, disabled }) => {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pasteData = e.clipboardData.getData('text').slice(0, length).toUpperCase();
+    const pasteData = e.clipboardData.getData('text').replace(/-/g, '').slice(0, 9).toUpperCase();
     if (/^[a-zA-Z0-9]*$/.test(pasteData)) {
       onChange(pasteData);
     }
   };
 
-  return (
-    <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', my: 2 }}>
-      {Array.from({ length }, (_, index) => (
-        <TextField
-          key={index}
-          id={`code-input-${index}`}
-          value={digits[index] || ''}
-          onChange={(e) => handleChange(e.target.value, index)}
-          onKeyDown={(e) => handleKeyDown(e, index)}
-          onPaste={handlePaste}
-          disabled={disabled}
-          inputProps={{
-            maxLength: 1,
-            style: { 
-              textAlign: 'center', 
-              fontSize: '2rem',
-              fontWeight: 'bold',
-              color: '#ffffff',
-              padding: '10px'
-            }
-          }}
-          sx={{
-            width: 60,
-            height: 60,
-            '& .MuiOutlinedInput-root': {
-              height: '100%',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              '& fieldset': {
-                borderColor: '#4fc3f7',
-                borderWidth: 2,
-              },
-              '&:hover fieldset': {
-                borderColor: '#ffffff',
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: '#4fc3f7',
-                borderWidth: 3,
-              },
-              '&.Mui-disabled': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                '& fieldset': {
-                  borderColor: '#666666',
+  // Función para renderizar los grupos de inputs
+  const renderInputGroup = (start, end) => {
+    return (
+      <Box sx={{ display: 'flex', gap: 1 }}>
+        {Array.from({ length: end - start + 1 }, (_, i) => {
+          const index = start + i;
+          return (
+            <TextField
+              key={index}
+              id={`code-input-${index}`}
+              value={digits[index] || ''}
+              onChange={(e) => handleChange(e.target.value, index)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
+              onPaste={handlePaste}
+              disabled={disabled}
+              inputProps={{
+                maxLength: 1,
+                style: { 
+                  textAlign: 'center', 
+                  fontSize: '2rem',
+                  fontWeight: 'bold',
+                  color: '#ffffff',
+                  padding: '10px'
                 }
-              }
-            }
-          }}
-        />
-      ))}
+              }}
+              sx={{
+                width: 60,
+                height: 60,
+                '& .MuiOutlinedInput-root': {
+                  height: '100%',
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  '& fieldset': {
+                    borderColor: '#4fc3f7',
+                    borderWidth: 2,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: '#ffffff',
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: '#4fc3f7',
+                    borderWidth: 3,
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    '& fieldset': {
+                      borderColor: '#666666',
+                    }
+                  }
+                }
+              }}
+            />
+          );
+        })}
+      </Box>
+    );
+  };
+
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, justifyContent: 'center', my: 2 }}>
+      {renderInputGroup(0, 2)}
+      <Typography variant="h4" sx={{ color: '#4fc3f7', fontWeight: 'bold' }}>-</Typography>
+      {renderInputGroup(3, 5)}
+      <Typography variant="h4" sx={{ color: '#4fc3f7', fontWeight: 'bold' }}>-</Typography>
+      {renderInputGroup(6, 8)}
     </Box>
   );
 };
@@ -278,7 +303,7 @@ export default function RemoteSupport() {
           setTimeout(() => {
             setFullscreen(true);
             log("🖥️ Modo pantalla completa activado automáticamente");
-          }, 1000);
+          }, 500);
         }
       }
     };
@@ -453,8 +478,8 @@ export default function RemoteSupport() {
   };
 
   const handleConnect = async () => {
-    if (!sessionCode.trim() || sessionCode.length !== 6) {
-      log("❌ El código debe tener 6 caracteres");
+    if (!sessionCode.trim() || sessionCode.length !== 9) {
+      log("❌ El código debe tener 9 caracteres");
       return;
     }
 
@@ -510,6 +535,13 @@ export default function RemoteSupport() {
 
   const toggleFullscreen = () => {
     setFullscreen(!fullscreen);
+  };
+
+  // Formatear el código para mostrar con guiones
+  const formatSessionCode = (code) => {
+    if (code.length <= 3) return code;
+    if (code.length <= 6) return `${code.slice(0, 3)}-${code.slice(3)}`;
+    return `${code.slice(0, 3)}-${code.slice(3, 6)}-${code.slice(6, 9)}`;
   };
 
   // Event listeners para el video
@@ -570,15 +602,15 @@ export default function RemoteSupport() {
         color: "white", 
         border: "2px solid #143a66", 
         borderRadius: "16px", 
-        maxWidth: 900, 
+        maxWidth: 1000, 
         mx: "auto", 
         mt: 4,
         display: fullscreen ? 'none' : 'block'
       }}>
-        <CardContent sx={{ p: 3 }}>
+        <CardContent sx={{ p: 4 }}>
           <Stack spacing={3} alignItems="center">
             <SupportAgentIcon sx={{ fontSize: 52, color: "#4fc3f7" }} />
-            <Typography variant="h6" sx={{ fontWeight: 800, color: "#4fc3f7" }}>
+            <Typography variant="h4" sx={{ fontWeight: 800, color: "#4fc3f7", textAlign: 'center' }}>
               Técnico - Asistencia Remota
             </Typography>
 
@@ -589,14 +621,13 @@ export default function RemoteSupport() {
 
             {role === "tecnico" && (
               <>
-                <Typography sx={{ color: "#9fd8ff", textAlign: "center" }}>
-                  Ingresa el código de 6 dígitos que te proporcionó el cliente
+                <Typography sx={{ color: "#9fd8ff", textAlign: "center", fontSize: '1.2rem' }}>
+                  Ingresa el código de 9 dígitos que te proporcionó el cliente
                 </Typography>
                 
                 <CodeInput 
                   value={sessionCode} 
                   onChange={setSessionCode}
-                  length={6}
                   disabled={status === "pending" || status === "connected"}
                 />
 
@@ -604,8 +635,9 @@ export default function RemoteSupport() {
                   <Button 
                     variant="contained" 
                     onClick={handleConnect} 
-                    disabled={!sessionCode.trim() || sessionCode.length !== 6}
+                    disabled={!sessionCode.trim() || sessionCode.length !== 9}
                     size="large"
+                    sx={{ fontSize: '1.1rem', px: 4, py: 1 }}
                   >
                     Conectar a sesión
                   </Button>
@@ -613,17 +645,18 @@ export default function RemoteSupport() {
 
                 {(status === "pending" || status === "connected") && (
                   <>
-                    <Typography sx={{ color: "#9de6a2", fontWeight: 700, textAlign: 'center' }}>
+                    <Typography sx={{ color: "#9de6a2", fontWeight: 700, textAlign: 'center', fontSize: '1.2rem' }}>
                       {status === "pending" ? "Conectado - Esperando pantalla..." : "✅ Conexión establecida - Pantalla compartida"}
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', mt: 2 }}>
                       <Button
                         variant={controlEnabled ? "contained" : "outlined"}
                         onClick={toggleControl}
                         startIcon={<MouseIcon />}
                         color={controlEnabled ? "success" : "primary"}
                         size="large"
+                        sx={{ fontSize: '1rem', px: 3 }}
                       >
                         {controlEnabled ? 'Control Activo' : 'Activar Control'}
                       </Button>
@@ -634,20 +667,22 @@ export default function RemoteSupport() {
                         startIcon={<FullscreenIcon />}
                         color="secondary"
                         size="large"
+                        sx={{ fontSize: '1rem', px: 3 }}
                       >
                         Pantalla Completa
                       </Button>
                       
-                      <Typography variant="h4" sx={{ 
+                      <Typography variant="h3" sx={{ 
                         fontWeight: 900, 
-                        letterSpacing: 4,
+                        letterSpacing: 3,
                         color: '#4fc3f7',
                         bgcolor: 'rgba(255,255,255,0.1)',
-                        px: 3,
-                        py: 1,
-                        borderRadius: 2
+                        px: 4,
+                        py: 2,
+                        borderRadius: 3,
+                        border: '2px solid #4fc3f7'
                       }}>
-                        {sessionCode}
+                        {formatSessionCode(sessionCode)}
                       </Typography>
                     </Box>
                   </>
@@ -656,33 +691,35 @@ export default function RemoteSupport() {
             )}
 
             {(status === "connected" || status === "pending") && (
-              <Button variant="outlined" onClick={handleClose} size="large">
+              <Button variant="outlined" onClick={handleClose} size="large" sx={{ mt: 2 }}>
                 Cerrar sesión
               </Button>
             )}
 
-            {/* Video placeholder */}
+            {/* Video placeholder - Más grande */}
             <Box sx={{ 
               position: 'relative', 
               width: '100%', 
-              minHeight: 300,
+              minHeight: 400,
               bgcolor: '#000',
               borderRadius: 2,
-              border: '2px solid #143a66',
+              border: '3px solid #143a66',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#666'
+              color: '#666',
+              mt: 2,
+              p: 3
             }}>
               {status === "connected" ? (
-                <Typography>La pantalla se muestra en modo pantalla completa</Typography>
+                <Typography variant="h6">La pantalla se muestra en modo pantalla completa para mejor visualización</Typography>
               ) : (
-                <Typography>La pantalla compartida aparecerá aquí</Typography>
+                <Typography variant="h6">La pantalla compartida aparecerá aquí en tamaño completo</Typography>
               )}
             </Box>
 
             {message && (
-              <Typography sx={{ mt: 1, color: "#b3e5fc", fontSize: 14, textAlign: "center" }}>
+              <Typography sx={{ mt: 2, color: "#b3e5fc", fontSize: 16, textAlign: "center" }}>
                 {message}
               </Typography>
             )}
@@ -690,59 +727,104 @@ export default function RemoteSupport() {
         </CardContent>
       </Card>
 
-      {/* Pantalla completa REAL */}
+      {/* PANTALLA COMPLETA MEJORADA */}
       <Dialog
         fullScreen
         open={fullscreen}
         onClose={toggleFullscreen}
         sx={{ 
           '& .MuiDialog-paper': { 
-            backgroundColor: '#000',
-            overflow: 'hidden'
+            backgroundColor: '#000000',
+            overflow: 'hidden',
+            margin: 0,
+            padding: 0
           } 
         }}
+        PaperProps={{
+          style: {
+            margin: 0,
+            padding: 0,
+            minWidth: '100%',
+            minHeight: '100%'
+          }
+        }}
       >
-        <AppBar sx={{ position: 'relative', bgcolor: 'rgba(16, 27, 58, 0.95)' }}>
-          <Toolbar>
+        {/* Header minimalista */}
+        <AppBar 
+          sx={{ 
+            position: 'fixed', 
+            bgcolor: 'rgba(0, 0, 0, 0.8)', 
+            backdropFilter: 'blur(10px)',
+            transition: 'opacity 0.3s',
+            '&:hover': {
+              opacity: 1
+            },
+            opacity: 0.7
+          }}
+          className="controls-header"
+        >
+          <Toolbar sx={{ minHeight: '64px!important', py: 1 }}>
             <IconButton
               edge="start"
               color="inherit"
               onClick={toggleFullscreen}
               aria-label="close"
               size="large"
+              sx={{ mr: 2 }}
             >
               <FullscreenExitIcon />
             </IconButton>
-            <Typography sx={{ ml: 2, flex: 1 }} variant="h6" component="div">
-              Sesión: <strong style={{color: '#4fc3f7'}}>{sessionCode}</strong> - 
-              <span style={{color: controlEnabled ? '#4caf50' : '#f44336', marginLeft: 10}}>
-                {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
-              </span>
+            
+            <Typography sx={{ flex: 1, fontSize: '1.2rem' }}>
+              Sesión: <strong style={{color: '#4fc3f7'}}>{formatSessionCode(sessionCode)}</strong>
             </Typography>
-            <Button 
-              variant={controlEnabled ? "contained" : "outlined"} 
-              onClick={toggleControl}
-              startIcon={<MouseIcon />}
-              color={controlEnabled ? "success" : "inherit"}
-              sx={{ mr: 2 }}
-              size="large"
-            >
-              {controlEnabled ? 'Desactivar Control' : 'Activar Control'}
-            </Button>
-            <Button autoFocus color="error" variant="contained" onClick={handleClose} size="large">
-              Cerrar Sesión
-            </Button>
+            
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Box sx={{ 
+                bgcolor: controlEnabled ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
+                color: controlEnabled ? '#4caf50' : '#f44336',
+                px: 2, 
+                py: 1, 
+                borderRadius: 1,
+                border: `1px solid ${controlEnabled ? '#4caf50' : '#f44336'}`,
+                fontWeight: 'bold'
+              }}>
+                {controlEnabled ? '🟢 CONTROL ACTIVO' : '🔴 CONTROL INACTIVO'}
+              </Box>
+              
+              <Button 
+                variant={controlEnabled ? "contained" : "outlined"} 
+                onClick={toggleControl}
+                startIcon={<MouseIcon />}
+                color={controlEnabled ? "success" : "inherit"}
+                size="medium"
+              >
+                {controlEnabled ? 'Desactivar' : 'Activar'}
+              </Button>
+              
+              <Button 
+                color="error" 
+                variant="contained" 
+                onClick={handleClose}
+                size="medium"
+              >
+                Cerrar
+              </Button>
+            </Box>
           </Toolbar>
         </AppBar>
         
-        {/* Video en pantalla completa REAL */}
+        {/* Video en pantalla completa REAL - 100% del viewport */}
         <Box sx={{ 
           width: '100vw',
-          height: 'calc(100vh - 64px)',
+          height: '100vh',
           backgroundColor: '#000',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          margin: 0,
+          padding: 0,
+          overflow: 'hidden'
         }}>
           <video
             ref={remoteVideoRef}
@@ -753,52 +835,66 @@ export default function RemoteSupport() {
               width: '100%',
               height: '100%',
               objectFit: 'contain',
-              cursor: controlEnabled ? 'crosshair' : 'default'
+              cursor: controlEnabled ? 'crosshair' : 'default',
+              margin: 0,
+              padding: 0,
+              display: 'block'
             }}
           />
           
-          {/* Overlay de información */}
-          <Box sx={{ 
-            position: 'absolute', 
-            top: 20,
-            left: 20,
-            bgcolor: 'rgba(0,0,0,0.8)', 
-            color: controlEnabled ? '#4caf50' : '#f44336',
-            px: 3, 
-            py: 2, 
-            borderRadius: 2,
-            fontSize: '1.1rem',
-            fontWeight: 'bold',
-            border: `2px solid ${controlEnabled ? '#4caf50' : '#f44336'}`
-          }}>
-            {controlEnabled ? '🟢 CONTROL REMOTO ACTIVO' : '🔴 CONTROL REMOTO INACTIVO'}
-          </Box>
-
-          {/* Instrucciones */}
-          {controlEnabled && (
-            <Box sx={{ 
+          {/* Overlay de información que aparece al pasar el mouse */}
+          <Box 
+            className="control-info"
+            sx={{ 
               position: 'absolute', 
-              bottom: 20,
+              bottom: 80,
               left: '50%',
               transform: 'translateX(-50%)',
-              bgcolor: 'rgba(0,0,0,0.8)', 
+              bgcolor: 'rgba(0,0,0,0.9)', 
               color: '#4fc3f7',
-              px: 3, 
-              py: 2, 
-              borderRadius: 2,
+              px: 4, 
+              py: 3, 
+              borderRadius: 3,
               textAlign: 'center',
-              border: '2px solid #4fc3f7'
-            }}>
-              <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                🖱️ Puede usar el mouse y teclado para controlar la pantalla remota
+              border: '2px solid #4fc3f7',
+              transition: 'opacity 0.3s',
+              opacity: 0,
+              '&:hover, .controls-header:hover ~ &': {
+                opacity: 1
+              }
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+              🖱️ Control Remoto {controlEnabled ? 'ACTIVADO' : 'DESACTIVADO'}
+            </Typography>
+            {controlEnabled && (
+              <Typography sx={{ fontSize: '1rem' }}>
+                Puede usar el mouse, teclado y scroll para controlar la pantalla remota
               </Typography>
-              <Typography sx={{ mt: 1, fontSize: '0.9rem' }}>
-                Click izquierdo, click derecho, scroll y teclado están habilitados
-              </Typography>
-            </Box>
-          )}
+            )}
+          </Box>
         </Box>
       </Dialog>
+
+      <style jsx global>{`
+        .controls-header {
+          transition: opacity 0.3s ease-in-out;
+        }
+        
+        .controls-header:hover {
+          opacity: 1 !important;
+        }
+        
+        .controls-header:hover ~ .control-info {
+          opacity: 1 !important;
+        }
+        
+        body {
+          margin: 0;
+          padding: 0;
+          overflow: hidden;
+        }
+      `}</style>
     </>
   );
 }
