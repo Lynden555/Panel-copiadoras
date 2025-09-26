@@ -905,9 +905,9 @@ export default function RemoteSupport() {
             playsInline
             muted
             style={{ 
-              width: '280%',       // Cambia de '100%' a 'auto'
+              width: '98%',       // Cambia de '100%' a 'auto'
               height: '98%',      // Mantiene la altura completa
-              maxWidth: '285%',    // Añade esto para que no se salga de la pantalla
+              maxWidth: '100%',    // Añade esto para que no se salga de la pantalla
               objectFit: 'contain', // Mantiene 'contain' para ver todo
               cursor: controlEnabled ? 'crosshair' : 'default'
               }}
