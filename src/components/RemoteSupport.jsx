@@ -548,26 +548,28 @@ const modifiersStateRef = useRef({
 });
 
 const handleKeyDown = useCallback((event) => {
-  if (!controlEnabled) return;
-  
-  const key = event.key.toLowerCase();
-  
-  // ⬇️ ACTUALIZAR estado de modificadores
-  if (key === 'control' || key === 'ctrl') modifiersStateRef.current.control = true;
-  if (key === 'alt') modifiersStateRef.current.alt = true;
-  if (key === 'shift') modifiersStateRef.current.shift = true;
-  if (key === 'meta') modifiersStateRef.current.meta = true;
+    if (!controlEnabled) return;
+    
+    // ⬇️ DEBUG TEMPORAL - MOSTRAR TODO DEL EVENTO
+    console.log('🎹🔴🔴🔴 FRONTEND KEYDOWN:');
+    console.log('   key:', event.key);
+    console.log('   code:', event.code);
+    console.log('   ctrlKey:', event.ctrlKey);
+    console.log('   altKey:', event.altKey); 
+    console.log('   shiftKey:', event.shiftKey);
+    console.log('   metaKey:', event.metaKey);
+    console.log('   ---');
+    
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+        event.preventDefault();
+    }
 
-  if (['control', 'alt', 'shift', 'meta'].includes(key)) {
-    event.preventDefault();
-  }
-
-  sendCommand({
-    type: 'keyToggle',
-    key: key,
-    down: true,
-    modifiers: getCurrentModifiers() // ⬅️ CAMBIA esta línea
-  });
+    sendCommand({
+        type: 'keyToggle',
+        key: event.key.toLowerCase(),
+        down: true,
+        modifiers: getModifiers(event)
+    });
 }, [controlEnabled, sendCommand]);
 
 const handleKeyUp = useCallback((event) => {
