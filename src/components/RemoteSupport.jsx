@@ -548,50 +548,43 @@ const modifiersStateRef = useRef({
 });
 
 const handleKeyDown = useCallback((event) => {
-  if (!controlEnabled) return;
-  
-  const key = event.key.toLowerCase();
-  
-  // ⬇️ ACTUALIZAR estado de modificadores
-  if (key === 'control' || key === 'ctrl') modifiersStateRef.current.control = true;
-  if (key === 'alt') modifiersStateRef.current.alt = true;
-  if (key === 'shift') modifiersStateRef.current.shift = true;
-  if (key === 'meta') modifiersStateRef.current.meta = true;
+    if (!controlEnabled) return;
+    
+    if (['Control', 'Alt', 'Shift', 'Meta'].includes(event.key)) {
+        event.preventDefault();
+    }
 
-  if (['control', 'alt', 'shift', 'meta'].includes(key)) {
-    event.preventDefault();
-  }
-
-  sendCommand({
-    type: 'keyToggle',
-    key: key,
-    down: true,
-    modifiers: getCurrentModifiers() // ⬅️ CAMBIA esta línea
-  });
+    sendCommand({
+        type: 'keyToggle',
+        key: event.key.toLowerCase(),
+        down: true,
+        modifiers: getModifiers(event)
+    });
 }, [controlEnabled, sendCommand]);
 
 const handleKeyUp = useCallback((event) => {
-  if (!controlEnabled) return;
-  
-  const key = event.key.toLowerCase();
-  
-  // ⬇️ ACTUALIZAR estado de modificadores
-  if (key === 'control' || key === 'ctrl') modifiersStateRef.current.control = false;
-  if (key === 'alt') modifiersStateRef.current.alt = false;
-  if (key === 'shift') modifiersStateRef.current.shift = false;
-  if (key === 'meta') modifiersStateRef.current.meta = false;
-
-  event.preventDefault();
-  sendCommand({
-    type: 'keyToggle', 
-    key: key,
-    down: false,
-    modifiers: getCurrentModifiers() // ⬅️ CAMBIA esta línea
-  });
+    if (!controlEnabled) return;
+    
+    event.preventDefault();
+    sendCommand({
+        type: 'keyToggle',
+        key: event.key.toLowerCase(),
+        down: false,
+        modifiers: getModifiers(event)
+    });
 }, [controlEnabled, sendCommand]);
 
+const getModifiers = (event) => {
+    const modifiers = [];
+    if (event.ctrlKey) modifiers.push('control');
+    if (event.altKey) modifiers.push('alt');
+    if (event.shiftKey) modifiers.push('shift');
+    if (event.metaKey) modifiers.push('command');
+    return modifiers;
+};
+
 // ⬇️ NUEVA FUNCIÓN que usa el estado guardado
-const getCurrentModifiers = () => {
+  const getCurrentModifiers = () => {
   const modifiers = [];
   const state = modifiersStateRef.current;
   
@@ -600,16 +593,6 @@ const getCurrentModifiers = () => {
   if (state.shift) modifiers.push('shift');
   if (state.meta) modifiers.push('command');
   
-  return modifiers;
-};
-
-// ⬇️ LA ORIGINAL la puedes eliminar o dejar
-const getModifiers = (event) => {
-  const modifiers = [];
-  if (event.ctrlKey) modifiers.push('control');
-  if (event.altKey) modifiers.push('alt');
-  if (event.shiftKey) modifiers.push('shift');
-  if (event.metaKey) modifiers.push('command');
   return modifiers;
 };
 
