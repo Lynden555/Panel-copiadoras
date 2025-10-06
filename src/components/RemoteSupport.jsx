@@ -14,7 +14,7 @@ import KeyboardIcon from "@mui/icons-material/Keyboard";
 import CloseIcon from "@mui/icons-material/Close";
 
 const API_BASE = "https://copias-backend-production.up.railway.app";
-const SIGNALING_URL = "wss://grapeassist.org";
+const SIGNALING_URL = "wss://app.grapeassist.org";
 
 const RTC_CONFIG = {
   iceServers: [
