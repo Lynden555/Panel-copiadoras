@@ -838,7 +838,7 @@ const handleGenerarPDF = async (printerId) => {
           )}
         </Box>
 
-{/* 🆕 BOTONES DE CORTE Y PDF - MEJOR DISEÑO */}
+{/* 🆕 BOTONES DE CORTE Y PDF - VERSIÓN CORREGIDA */}
 <Box sx={{ mt: 3, p: 2, border: '1px solid rgba(79,195,247,0.3)', borderRadius: 2, bgcolor: 'rgba(12,22,48,0.4)' }}>
   <Typography sx={{ color: '#4fc3f7', fontWeight: 700, mb: 1.5, fontSize: '14px' }}>
     📊 REPORTES MENSUALES
@@ -848,7 +848,7 @@ const handleGenerarPDF = async (printerId) => {
     <Button
       variant="contained"
       size="small"
-      onClick={() => handleRegistrarCorte(p._id)}
+      onClick={() => handleConfirmarCorte(p._id)}
       disabled={generandoCorte === p._id}
       startIcon={generandoCorte === p._id ? null : <>📅</>}
       sx={{
@@ -866,27 +866,30 @@ const handleGenerarPDF = async (printerId) => {
       {generandoCorte === p._id ? '⌛ Registrando...' : 'Registrar Corte'}
     </Button>
 
-      <Button
-        variant="contained"
-        size="small"
-        onClick={() => handleConfirmarCorte(p._id)}
-        disabled={generandoCorte === p._id}
-        startIcon={generandoCorte === p._id ? null : <>📅</>}
-        sx={{
-          bgcolor: '#4caf50',
-          color: 'white',
-          fontWeight: 700,
-          borderRadius: '8px',
-          px: 2,
-          py: 1,
-          minWidth: '140px',
-          '&:hover': { bgcolor: '#388e3c', transform: 'translateY(-1px)' },
-          '&:disabled': { opacity: 0.6 }
-        }}
-      >
-        {generandoCorte === p._id ? '⌛ Registrando...' : 'Registrar Corte'}
-      </Button>
-
+    <Button
+      variant="outlined"
+      size="small"
+      onClick={() => handleGenerarPDF(p._id)}
+      disabled={generandoPDF === p._id}
+      startIcon={generandoPDF === p._id ? null : <>📄</>}
+      sx={{
+        borderColor: '#2196f3',
+        color: '#2196f3',
+        fontWeight: 700,
+        borderRadius: '8px',
+        px: 2,
+        py: 1,
+        minWidth: '140px',
+        '&:hover': { 
+          bgcolor: 'rgba(33,150,243,0.1)',
+          borderColor: '#1976d2',
+          transform: 'translateY(-1px)'
+        },
+        '&:disabled': { opacity: 0.6 }
+      }}
+    >
+      {generandoPDF === p._id ? '⌛ Generando...' : 'Generar PDF'}
+    </Button>
   </Stack>
   
   <Typography sx={{ color: '#89cff0', fontSize: '12px', mt: 1, opacity: 0.8 }}>
