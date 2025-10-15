@@ -208,29 +208,48 @@ const handleGenerarPDF = async (printerId) => {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const res = await fetch(`${API_BASE}/api/impresoras/${printerId}/generar-pdf`);
+    console.log('🔄 Iniciando descarga de PDF...');
     
-    if (!res.ok) {
-      const errorData = await res.json();
-      throw new Error(errorData?.error || 'Error generando PDF');
+    const response = await fetch(`${API_BASE}/api/impresoras/${printerId}/generar-pdf`);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ Error response:', errorText);
+      throw new Error('Error del servidor al generar PDF');
     }
 
-    // Crear blob y descargar PDF
-    const blob = await res.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `reporte-${printerId}-${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    // Verificar que sea un PDF
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/pdf')) {
+      throw new Error('El servidor no devolvió un PDF válido');
+    }
 
-    setSuccessMsg('📄 PDF generado y descargado correctamente');
+    // Crear blob y descargar
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    
+    // Crear enlace de descarga visible
+    const link = document.createElement('a');
+    link.href = url;
+    
+    // Obtener nombre de la impresora para el archivo
+    const printer = printers.find(p => p._id === printerId);
+    const printerName = printer?.printerName || printer?.host || 'impresora';
+    const fileName = `reporte-${printerName}-${new Date().toISOString().split('T')[0]}.pdf`;
+    link.download = fileName;
+    
+    // Hacer clic automático y limpiar
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+
+    console.log('✅ PDF descargado exitosamente');
+    setSuccessMsg(`📄 PDF "${fileName}" descargado correctamente`);
 
   } catch (err) {
-    console.error('Error generando PDF:', err);
-    setErrorMsg(err.message);
+    console.error('❌ Error generando PDF:', err);
+    setErrorMsg(`Error al generar PDF: ${err.message}`);
   } finally {
     setGenerandoPDF(null);
   }
