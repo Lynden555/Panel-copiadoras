@@ -38,6 +38,10 @@ export default function EmpresasPanel() {
   const [loadingPrinters, setLoadingPrinters] = useState(false);
   const [expandedPrinterId, setExpandedPrinterId] = useState(null);
 
+    // 🆕 ESTADOS PARA CORTES Y PDF
+  const [generandoCorte, setGenerandoCorte] = useState(null);
+  const [generandoPDF, setGenerandoPDF] = useState(null);
+
   // confirm delete
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
@@ -165,6 +169,72 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
     empresaId: localStorage.getItem('empresaId') || '',
     ciudad:    localStorage.getItem('ciudad')    || '',
   });
+
+  // 🆕 FUNCIONES PARA CORTES Y PDF - PEGAR DESPUÉS DE getScope()
+const handleRegistrarCorte = async (printerId) => {
+  try {
+    setGenerandoCorte(printerId);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const res = await fetch(`${API_BASE}/api/impresoras/${printerId}/registrar-corte`, {
+      method: 'POST'
+    });
+
+    const data = await res.json();
+    
+    if (!res.ok || !data?.ok) {
+      throw new Error(data?.error || 'Error registrando corte');
+    }
+
+    setSuccessMsg(`✅ Corte registrado: ${data.datos.totalPaginas} páginas este período`);
+    
+    // Recargar datos de impresoras para reflejar el nuevo corte
+    if (selectedEmpresa?._id) {
+      await loadPrinters(selectedEmpresa._id);
+    }
+
+  } catch (err) {
+    console.error('Error registrando corte:', err);
+    setErrorMsg(err.message);
+  } finally {
+    setGenerandoCorte(null);
+  }
+};
+
+const handleGenerarPDF = async (printerId) => {
+  try {
+    setGenerandoPDF(printerId);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const res = await fetch(`${API_BASE}/api/impresoras/${printerId}/generar-pdf`);
+    
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(errorData?.error || 'Error generando PDF');
+    }
+
+    // Crear blob y descargar PDF
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `reporte-${printerId}-${Date.now()}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    setSuccessMsg('📄 PDF generado y descargado correctamente');
+
+  } catch (err) {
+    console.error('Error generando PDF:', err);
+    setErrorMsg(err.message);
+  } finally {
+    setGenerandoPDF(null);
+  }
+};
 
   // ====== loaders ======
   const loadEmpresas = async () => {
@@ -734,6 +804,45 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
             </>
           )}
         </Box>
+
+                    {/* 🆕 BOTONES DE CORTE Y PDF - PEGAR DESPUÉS DE LOS CONTADORES */}
+            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => handleRegistrarCorte(p._id)}
+                disabled={generandoCorte === p._id}
+                sx={{
+                  bgcolor: '#4caf50',
+                  color: 'white',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  px: 2,
+                  '&:hover': { bgcolor: '#388e3c' },
+                  '&:disabled': { opacity: 0.6 }
+                }}
+              >
+                {generandoCorte === p._id ? 'Registrando...' : '📅 Registrar Corte'}
+              </Button>
+
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => handleGenerarPDF(p._id)}
+                disabled={generandoPDF === p._id}
+                sx={{
+                  borderColor: '#2196f3',
+                  color: '#2196f3',
+                  fontWeight: 700,
+                  borderRadius: '8px',
+                  px: 2,
+                  '&:hover': { bgcolor: 'rgba(33,150,243,0.1)' },
+                  '&:disabled': { opacity: 0.6 }
+                }}
+              >
+                {generandoPDF === p._id ? 'Generando...' : '📄 Generar PDF'}
+              </Button>
+            </Box>
 
               <Box>
                 <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
