@@ -805,44 +805,64 @@ const handleGenerarPDF = async (printerId) => {
           )}
         </Box>
 
-                    {/* 🆕 BOTONES DE CORTE Y PDF - PEGAR DESPUÉS DE LOS CONTADORES */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-              <Button
-                variant="contained"
-                size="small"
-                onClick={() => handleRegistrarCorte(p._id)}
-                disabled={generandoCorte === p._id}
-                sx={{
-                  bgcolor: '#4caf50',
-                  color: 'white',
-                  fontWeight: 700,
-                  borderRadius: '8px',
-                  px: 2,
-                  '&:hover': { bgcolor: '#388e3c' },
-                  '&:disabled': { opacity: 0.6 }
-                }}
-              >
-                {generandoCorte === p._id ? 'Registrando...' : '📅 Registrar Corte'}
-              </Button>
+{/* 🆕 BOTONES DE CORTE Y PDF - MEJOR DISEÑO */}
+<Box sx={{ mt: 3, p: 2, border: '1px solid rgba(79,195,247,0.3)', borderRadius: 2, bgcolor: 'rgba(12,22,48,0.4)' }}>
+  <Typography sx={{ color: '#4fc3f7', fontWeight: 700, mb: 1.5, fontSize: '14px' }}>
+    📊 REPORTES MENSUALES
+  </Typography>
+  
+  <Stack direction="row" spacing={1.5} sx={{ flexWrap: 'wrap', gap: 1 }}>
+    <Button
+      variant="contained"
+      size="small"
+      onClick={() => handleRegistrarCorte(p._id)}
+      disabled={generandoCorte === p._id}
+      startIcon={generandoCorte === p._id ? null : <>📅</>}
+      sx={{
+        bgcolor: '#4caf50',
+        color: 'white',
+        fontWeight: 700,
+        borderRadius: '8px',
+        px: 2,
+        py: 1,
+        minWidth: '140px',
+        '&:hover': { bgcolor: '#388e3c', transform: 'translateY(-1px)' },
+        '&:disabled': { opacity: 0.6 }
+      }}
+    >
+      {generandoCorte === p._id ? '⌛ Registrando...' : 'Registrar Corte'}
+    </Button>
 
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={() => handleGenerarPDF(p._id)}
-                disabled={generandoPDF === p._id}
-                sx={{
-                  borderColor: '#2196f3',
-                  color: '#2196f3',
-                  fontWeight: 700,
-                  borderRadius: '8px',
-                  px: 2,
-                  '&:hover': { bgcolor: 'rgba(33,150,243,0.1)' },
-                  '&:disabled': { opacity: 0.6 }
-                }}
-              >
-                {generandoPDF === p._id ? 'Generando...' : '📄 Generar PDF'}
-              </Button>
-            </Box>
+    <Button
+      variant="outlined"
+      size="small"
+      onClick={() => handleGenerarPDF(p._id)}
+      disabled={generandoPDF === p._id}
+      startIcon={generandoPDF === p._id ? null : <>📄</>}
+      sx={{
+        borderColor: '#2196f3',
+        color: '#2196f3',
+        fontWeight: 700,
+        borderRadius: '8px',
+        px: 2,
+        py: 1,
+        minWidth: '140px',
+        '&:hover': { 
+          bgcolor: 'rgba(33,150,243,0.1)',
+          borderColor: '#1976d2',
+          transform: 'translateY(-1px)'
+        },
+        '&:disabled': { opacity: 0.6 }
+      }}
+    >
+      {generandoPDF === p._id ? '⌛ Generando...' : 'Generar PDF'}
+    </Button>
+  </Stack>
+  
+  <Typography sx={{ color: '#89cff0', fontSize: '12px', mt: 1, opacity: 0.8 }}>
+    Primero registra un corte, luego genera el reporte PDF
+  </Typography>
+</Box>
 
               <Box>
                 <Typography sx={{ color:'#9fd8ff', mb:1 }}>Consumibles</Typography>
