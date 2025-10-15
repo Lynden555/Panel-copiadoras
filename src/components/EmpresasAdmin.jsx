@@ -20,6 +20,7 @@ export default function EmpresasPanel() {
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(false);
   const [selectedEmpresa, setSelectedEmpresa] = useState(null);
+  const [confirmacionCorte, setConfirmacionCorte] = useState(null);
 
   // derecha: modo = 'list' | 'create' | 'empresa'
   const [mode, setMode] = useState('list');
@@ -171,7 +172,19 @@ const isOnlineUI = (p, nowTs = Date.now()) => {
   });
 
   // 🆕 FUNCIONES PARA CORTES Y PDF - PEGAR DESPUÉS DE getScope()
-const handleRegistrarCorte = async (printerId) => {
+const handleConfirmarCorte = (printerId) => {
+  const printer = printers.find(p => p._id === printerId);
+  setConfirmacionCorte({
+    printerId,
+    printerName: printer?.printerName || printer?.host || 'Impresora'
+  });
+};
+
+const handleRegistrarCorte = async () => {
+  if (!confirmacionCorte) return;
+  
+  const printerId = confirmacionCorte.printerId;
+  
   try {
     setGenerandoCorte(printerId);
     setErrorMsg('');
@@ -187,9 +200,9 @@ const handleRegistrarCorte = async (printerId) => {
       throw new Error(data?.error || 'Error registrando corte');
     }
 
-    setSuccessMsg(`✅ Corte registrado: ${data.datos.totalPaginas} páginas este período`);
+    setSuccessMsg(`✅ Corte registrado: ${data.datos?.totalPaginas || 0} páginas este período`);
     
-    // Recargar datos de impresoras para reflejar el nuevo corte
+    // Recargar datos de impresoras
     if (selectedEmpresa?._id) {
       await loadPrinters(selectedEmpresa._id);
     }
@@ -199,6 +212,7 @@ const handleRegistrarCorte = async (printerId) => {
     setErrorMsg(err.message);
   } finally {
     setGenerandoCorte(null);
+    setConfirmacionCorte(null);
   }
 };
 
@@ -852,30 +866,27 @@ const handleGenerarPDF = async (printerId) => {
       {generandoCorte === p._id ? '⌛ Registrando...' : 'Registrar Corte'}
     </Button>
 
-    <Button
-      variant="outlined"
-      size="small"
-      onClick={() => handleGenerarPDF(p._id)}
-      disabled={generandoPDF === p._id}
-      startIcon={generandoPDF === p._id ? null : <>📄</>}
-      sx={{
-        borderColor: '#2196f3',
-        color: '#2196f3',
-        fontWeight: 700,
-        borderRadius: '8px',
-        px: 2,
-        py: 1,
-        minWidth: '140px',
-        '&:hover': { 
-          bgcolor: 'rgba(33,150,243,0.1)',
-          borderColor: '#1976d2',
-          transform: 'translateY(-1px)'
-        },
-        '&:disabled': { opacity: 0.6 }
-      }}
-    >
-      {generandoPDF === p._id ? '⌛ Generando...' : 'Generar PDF'}
-    </Button>
+      <Button
+        variant="contained"
+        size="small"
+        onClick={() => handleConfirmarCorte(p._id)}
+        disabled={generandoCorte === p._id}
+        startIcon={generandoCorte === p._id ? null : <>📅</>}
+        sx={{
+          bgcolor: '#4caf50',
+          color: 'white',
+          fontWeight: 700,
+          borderRadius: '8px',
+          px: 2,
+          py: 1,
+          minWidth: '140px',
+          '&:hover': { bgcolor: '#388e3c', transform: 'translateY(-1px)' },
+          '&:disabled': { opacity: 0.6 }
+        }}
+      >
+        {generandoCorte === p._id ? '⌛ Registrando...' : 'Registrar Corte'}
+      </Button>
+
   </Stack>
   
   <Typography sx={{ color: '#89cff0', fontSize: '12px', mt: 1, opacity: 0.8 }}>
@@ -925,7 +936,60 @@ const handleGenerarPDF = async (printerId) => {
     </CardContent>
   </Card>
 )}
-      </Box>
+     </Box>
+
+{/* 🆕 MODAL DE CONFIRMACIÓN PARA CORTE */}
+<Dialog
+  open={!!confirmacionCorte}
+  onClose={() => setConfirmacionCorte(null)}
+  PaperProps={{
+    sx: {
+      bgcolor: '#0f1b3a',
+      color: 'white',
+      border: '2px solid #123c6b',
+      borderRadius: '16px',
+    }
+  }}
+>
+  <DialogTitle sx={{ color: '#4fc3f7' }}>
+    ⚠️ Confirmar Registro de Corte
+  </DialogTitle>
+  <DialogContent>
+    <Typography>
+      ¿Estás seguro de que quieres registrar un corte para la impresora:
+    </Typography>
+    <Typography sx={{ fontWeight: 800, color: '#4fc3f7', my: 1 }}>
+      "{confirmacionCorte?.printerName}"
+    </Typography>
+    <Typography>
+      Esta acción guardará los contadores actuales como referencia para el próximo reporte.
+    </Typography>
+  </DialogContent>
+  <DialogActions sx={{ gap: 1, p: 2 }}>
+    <Button 
+      onClick={() => setConfirmacionCorte(null)}
+      sx={{ color: '#89cff0', borderColor: '#2b4d74' }}
+    >
+      Cancelar
+    </Button>
+    <Button 
+      onClick={() => handleRegistrarCorte(confirmacionCorte?.printerId)}
+      variant="contained"
+      sx={{ 
+        bgcolor: '#4caf50', 
+        color: 'white',
+        '&:hover': { bgcolor: '#388e3c' }
+      }}
+    >
+      Sí, Registrar Corte
+    </Button>
+  </DialogActions>
+</Dialog>
+
+
+
+
+
 
       {/* MODAL: ApiKey tras crear */}
       <Dialog
