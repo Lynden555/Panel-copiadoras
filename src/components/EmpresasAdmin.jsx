@@ -892,12 +892,12 @@ const handleGenerarPDF = async (printerId) => {
     </Button>
   </Stack>
   
-  <Typography sx={{ color: '#89cff0', fontSize: '12px', mt: 1, opacity: 0.8 }}>
+  <Typography sx={{ color: '#89cff0', fontSize: '13px', mt: 1, opacity: 0.8 }}>
     Primero registra un corte, luego genera el reporte PDF
   </Typography>
   
   {/* 🆕 LEYENDA CON FECHA DEL ÚLTIMO CORTE */}
-  <Typography sx={{ color: '#9fd8ff', fontSize: '11px', mt: 0.5, opacity: 0.7 }}>
+  <Typography sx={{ color: '#9fd8ff', fontSize: '14px', mt: 0.5, opacity: 0.7 }}>
     {latest.lastCutDate 
       ? `Fecha del último corte: ${new Date(latest.lastCutDate).toLocaleDateString('es-ES', { 
           day: '2-digit', 
